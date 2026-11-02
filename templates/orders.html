@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Refills & Delivery Tracking — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ==================== HEADER BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div>
+        <span class="inline-block bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full mb-2">
+          Doorstep Delivery Tracking
+        </span>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+          Refills & Delivery Status
+        </h1>
+        <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1 max-w-2xl">
+          View order status recorded by pharmacy and delivery staff. Live GPS, partner credentials, and delivery-time estimates are not configured by default.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 flex-shrink-0">
+        <a href="{{ url_for('medicines_directory') }}" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] font-bold px-4 py-3 rounded-2xl border border-[#FCDAD7] text-xs sm:text-sm flex items-center gap-2 transition">
+          <i class="fa-solid fa-pills text-[#F28B82]"></i>
+          <span>A-Z Medicines</span>
+        </a>
+
+        <a href="{{ url_for('refill') }}" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold px-5 py-3 rounded-2xl shadow-pastel flex items-center gap-2 transition active:scale-95 text-xs sm:text-sm">
+          <i class="fa-solid fa-cart-plus text-base"></i>
+          <span>Order Doorstep Refill</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ORDERS LIST ==================== -->
+  <div class="space-y-6">
+    {% for order in orders %}
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-6">
+      
+      <!-- Top Order Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#EAECEF] gap-3">
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl sm:text-2xl font-black text-[#30343B]">Order #{{ order.order_number }}</h2>
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+              {% if order.status == 'Delivered' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40
+              {% elif order.status == 'Out for Delivery' %}bg-amber-100 text-amber-800 border border-amber-300 animate-pulse
+              {% else %}bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7]{% endif %}">
+              {{ order.status }}
+            </span>
+          </div>
+          <p class="text-xs font-semibold text-[#777D87] mt-1">
+            <i class="fa-regular fa-clock mr-1"></i> Ordered At: {{ order.created_at }}
+          </p>
+        </div>
+
+        <div class="text-left sm:text-right">
+          <div class="text-xl sm:text-2xl font-black text-[#30343B]">₹{{ order.total_amount|round(0)|int }}</div>
+          <div class="text-xs font-semibold text-[#777D87]">{{ order.payment_method }}</div>
+        </div>
+      </div>
+
+      <!-- VISUAL 4-STAGE TIMELINE PROGRESSION -->
+      <div class="py-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          
+          <!-- Step 1: Confirmed -->
+          <div class="p-4 rounded-2xl border text-center transition
+            {% if order.status in ['Confirmed', 'Accepted', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'] %}
+            bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+            {% else %}
+            bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]
+            {% endif %}">
+            <div class="w-10 h-10 rounded-2xl mx-auto flex items-center justify-center text-lg font-black mb-2
+              {% if order.status in ['Confirmed', 'Accepted', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'] %}bg-[#65B9A9] text-white{% else %}bg-white text-[#777D87]{% endif %}">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div class="text-xs sm:text-sm font-bold text-[#30343B]">1. Confirmed</div>
+            <div class="text-[11px] text-[#777D87] mt-0.5">Order received</div>
+          </div>
+
+          <!-- Step 2: Packed -->
+          <div class="p-4 rounded-2xl border text-center transition
+            {% if order.status in ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'] %}
+            bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+            {% else %}
+            bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]
+            {% endif %}">
+            <div class="w-10 h-10 rounded-2xl mx-auto flex items-center justify-center text-lg font-black mb-2
+              {% if order.status in ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'] %}bg-[#65B9A9] text-white{% else %}bg-white text-[#777D87]{% endif %}">
+              <i class="fa-solid fa-box-open"></i>
+            </div>
+            <div class="text-xs sm:text-sm font-bold text-[#30343B]">2. Packed</div>
+            <div class="text-[11px] text-[#777D87] mt-0.5">Tamper-sealed</div>
+          </div>
+
+          <!-- Step 3: Out for Delivery -->
+          <div class="p-4 rounded-2xl border text-center transition
+            {% if order.status in ['Shipped', 'Out for Delivery', 'Delivered'] %}
+            bg-amber-50 border-amber-300 text-amber-900 animate-pulse
+            {% else %}
+            bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]
+            {% endif %}">
+            <div class="w-10 h-10 rounded-2xl mx-auto flex items-center justify-center text-lg font-black mb-2
+              {% if order.status in ['Shipped', 'Out for Delivery', 'Delivered'] %}bg-amber-500 text-white{% else %}bg-white text-[#777D87]{% endif %}">
+              <i class="fa-solid fa-motorcycle"></i>
+            </div>
+            <div class="text-xs sm:text-sm font-bold text-[#30343B]">3. Out for Delivery</div>
+            <div class="text-[11px] text-[#777D87] mt-0.5">{{ order.delivery_rider or 'Not assigned' }}</div>
+          </div>
+
+          <!-- Step 4: Delivered -->
+          <div class="p-4 rounded-2xl border text-center transition
+            {% if order.status == 'Delivered' %}
+            bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+            {% else %}
+            bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]
+            {% endif %}">
+            <div class="w-10 h-10 rounded-2xl mx-auto flex items-center justify-center text-lg font-black mb-2
+              {% if order.status == 'Delivered' %}bg-[#65B9A9] text-white{% else %}bg-white text-[#777D87]{% endif %}">
+              <i class="fa-solid fa-house-circle-check"></i>
+            </div>
+            <div class="text-xs sm:text-sm font-bold text-[#30343B]">4. Delivered</div>
+            <div class="text-[11px] text-[#777D87] mt-0.5">
+              {% if order.delivered_at %}{{ order.delivered_at }}{% else %}Delivery time not available{% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ORDER DETAILS & PHARMACY INFO -->
+      <div class="bg-[#FFF4F3] rounded-2xl p-4 sm:p-5 border border-[#EAECEF] grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+        <div>
+          <div class="text-[10px] font-bold uppercase text-[#777D87] mb-1">Ordered Medicines:</div>
+          <div class="text-[#30343B] font-bold text-sm leading-relaxed">{{ order.items_summary }}</div>
+          <div class="text-[#777D87] mt-1">Total Quantity: <strong class="text-[#30343B]">{{ order.total_pills }} tablets</strong></div>
+        </div>
+        <div>
+          <div class="text-[10px] font-bold uppercase text-[#777D87] mb-1">Delivery Destination & Chemist:</div>
+          <div class="text-[#30343B] leading-snug">{{ order.delivery_address }}</div>
+          <div class="text-[#E07067] font-bold mt-1">
+            <i class="fa-solid fa-store mr-1 text-[#F28B82]"></i> {{ order.pharmacy_name }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDER ACTION & TRACKING BUTTONS -->
+      <div class="pt-3 border-t border-[#EAECEF] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{{ url_for('order_detail', order_id=order.id) }}" class="inline-flex items-center gap-2 bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] font-black text-xs px-4 py-2.5 rounded-xl border border-[#FCDAD7] transition shadow-sm">
+            <i class="fa-solid fa-receipt text-[#F28B82]"></i>
+            <span>View order status & receipt</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+
+          <a href="{{ whatsapp_tracking_url(order, order.contact_phone, patient) }}" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center gap-1.5 bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold text-xs px-3.5 py-2.5 rounded-xl border border-[#25D366]/30 transition shadow-sm"
+             title="Open a user-initiated WhatsApp order-status share">
+            <i class="fa-brands fa-whatsapp text-sm text-[#25D366]"></i>
+            <span>Share status on WhatsApp</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-75"></i>
+          </a>
+        </div>
+
+        <div class="flex items-center gap-2">
+          {% if (session.get('user_role') in ['PHARMACY', 'ADMIN'] and order.status not in ['Delivered', 'Cancelled', 'Failed Delivery']) or (session.get('user_role') == 'DELIVERY' and order.status in ['Shipped', 'Out for Delivery']) %}
+          <form method="POST" action="{{ url_for('advance_order_status', order_id=order.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="bg-[#65B9A9] hover:bg-[#4FA393] text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+              <span>Advance status (staff)</span>
+              <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+          </form>
+          {% elif order.status == 'Delivered' %}
+          <span class="text-xs font-bold text-[#3D8577] bg-[#EBF6F4] px-3 py-1.5 rounded-xl border border-[#65B9A9]/30">
+            <i class="fa-solid fa-circle-check mr-1 text-[#65B9A9]"></i> Marked delivered; home-stock record updated
+          </span>
+          {% elif order.status == 'Failed Delivery' %}
+          <span class="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">Failed delivery; contact pharmacy to arrange next steps</span>
+          {% elif order.status == 'Cancelled' %}
+          <span class="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200">
+            <i class="fa-solid fa-ban mr-1 text-rose-500"></i> Cancelled & Restored
+          </span>
+          {% endif %}
+          {% if session.get('user_role') in ['DELIVERY', 'ADMIN'] and order.status in ['Shipped', 'Out for Delivery'] %}
+          <form method="POST" action="{{ url_for('mark_failed_delivery', order_id=order.id) }}" class="ml-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="failure_reason" value="Delivery attempt failed">
+            <button type="submit" class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">Mark failed delivery</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+    {% else %}
+    <div class="text-center py-16 bg-white rounded-3xl border border-[#EAECEF] p-8 shadow-card">
+      <div class="w-14 h-14 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center mx-auto text-2xl mb-3">
+        <i class="fa-solid fa-truck-ramp-box"></i>
+      </div>
+      <h3 class="text-lg font-black text-[#30343B]">No active orders right now</h3>
+      <p class="text-[#777D87] text-sm mt-1">Low-stock forecasts are advisory; orders are created only when a patient, caregiver, or authorized staff member submits one.</p>
+      <a href="{{ url_for('refill') }}" class="mt-4 inline-block bg-[#F28B82] hover:bg-[#E07067] text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-pastel">
+        Order Doorstep Refill
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Medical Profile - ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-7">
+
+  <!-- HERO PROFILE HEADER -->
+  <div class="bg-gradient-to-r from-primary-400 via-primary-500 to-rose-400 rounded-3xl p-6 sm:p-8 text-white shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+    <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="flex items-center gap-5 relative z-10">
+      <div class="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl text-white shadow-inner flex-shrink-0 border border-white/30">
+        <i class="fa-solid fa-hospital-user"></i>
+      </div>
+      <div>
+        <div class="inline-flex items-center gap-2 bg-white/25 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 border border-white/30">
+          <i class="fa-solid fa-id-badge text-amber-200"></i>
+          <span>Patient ID: #PAT-{{ patient.id }}</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+          {{ patient.name }}
+        </h1>
+        <div class="flex flex-wrap items-center gap-2 mt-2 text-xs font-bold text-white/95">
+          <span class="bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-sm">Age: <strong>{{ patient.age }}</strong></span>
+          <span class="bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-sm">Gender: <strong>{{ patient.gender }}</strong></span>
+          <span class="bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-sm">Blood Group: <strong class="text-amber-100 font-extrabold">{{ patient.blood_group or 'N/A' }}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 relative z-10 w-full md:w-auto">
+      <button onclick="toggleEditMode()" class="flex-1 md:flex-initial bg-white hover:bg-neutral-light text-primary-600 font-black px-5 py-3 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition transform active:scale-95 text-xs uppercase tracking-wider">
+        <i class="fa-solid fa-user-pen"></i>
+        <span>Edit Profile</span>
+      </button>
+      <a href="{{ url_for('logout') }}" class="bg-white/15 hover:bg-white/25 text-white font-bold px-4 py-3 rounded-2xl transition flex items-center gap-2 text-xs border border-white/30">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Sign Out</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- PATIENT MEDICAL CARDS OVERVIEW -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <!-- 1. Contact Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-border-subtle flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-3 text-primary-500 font-bold text-xs uppercase tracking-wider pb-3 border-b border-border-subtle">
+          <div class="w-8 h-8 rounded-xl bg-primary-50 flex items-center justify-center text-primary-500">
+            <i class="fa-solid fa-address-book"></i>
+          </div>
+          <span>Contact Details</span>
+        </div>
+        <div class="mt-4 space-y-3.5 text-xs">
+          <div>
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider">Registered Phone</span>
+            <strong class="text-text-main font-black text-sm">{{ patient.phone }}</strong>
+          </div>
+          <div>
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider">Delivery Residence</span>
+            <p class="text-text-main font-semibold leading-relaxed mt-0.5">{{ patient.address }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs">
+        <span class="text-text-muted font-semibold">Security PIN:</span>
+        <span class="font-bold text-text-main bg-neutral-light px-2.5 py-0.5 rounded-lg border border-border-subtle tracking-widest">**** (Secure)</span>
+      </div>
+    </div>
+
+    <!-- 2. Clinical Profile Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-border-subtle flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-3 text-status-teal font-bold text-xs uppercase tracking-wider pb-3 border-b border-border-subtle">
+          <div class="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-status-teal">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <span>Clinical Conditions</span>
+        </div>
+        <div class="mt-4 space-y-3 text-xs">
+          <div>
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider mb-1">Diagnosed Conditions</span>
+            <div class="bg-primary-50/50 p-2.5 rounded-xl border border-primary-100 text-text-main font-bold">
+              {{ patient.medical_conditions or 'None recorded' }}
+            </div>
+          </div>
+          <div>
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider mb-0.5">Known Drug Allergies</span>
+            <p class="text-text-main font-bold">{{ patient.allergies or 'None reported' }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs">
+        <span class="text-text-muted font-semibold">Mobility Status:</span>
+        <span class="bg-teal-50 text-teal-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-teal-200">
+          {{ patient.mobility_status or 'Independent' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 3. Caregiver & Doctor Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-border-subtle flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-3 text-primary-500 font-bold text-xs uppercase tracking-wider pb-3 border-b border-border-subtle">
+          <div class="w-8 h-8 rounded-xl bg-primary-50 flex items-center justify-center text-primary-500">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <span>Caregiver & Physician</span>
+        </div>
+        <div class="mt-4 space-y-3 text-xs">
+          <div>
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider">Authorized Caregiver</span>
+            <div class="flex items-center justify-between mt-0.5">
+              <strong class="text-text-main font-black text-sm">{{ patient.caregiver_name }}</strong>
+              <span class="text-[11px] bg-neutral-light px-2 py-0.5 rounded text-text-muted font-bold">{{ patient.caregiver_relation }}</span>
+            </div>
+            <div class="text-primary-500 font-bold mt-1">
+              <i class="fa-solid fa-phone mr-1"></i> {{ patient.caregiver_phone }}
+            </div>
+          </div>
+          <div class="pt-2 border-t border-border-subtle">
+            <span class="text-[11px] text-text-muted font-bold uppercase block tracking-wider">Geriatrician / Doctor</span>
+            <strong class="text-text-main font-bold text-xs block mt-0.5">{{ patient.doctor_name or 'Not assigned' }}</strong>
+            <div class="text-text-muted font-bold mt-1">
+              <i class="fa-solid fa-phone mr-1"></i> {{ patient.doctor_phone or 'N/A' }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-border-subtle text-right">
+        <span class="text-[11px] text-status-teal font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Caregiver Linked</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EDIT PATIENT DETAILS FORM -->
+  <div id="edit-patient-section" class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-border-subtle transition-all duration-300">
+    <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-6">
+      <div>
+        <h2 class="text-lg font-black text-text-main flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-primary-50 flex items-center justify-center text-primary-500">
+            <i class="fa-solid fa-user-pen"></i>
+          </div>
+          <span>Update Patient Information</span>
+        </h2>
+        <p class="text-xs text-text-muted font-medium mt-1">Modify senior contact details, medical history, address, or emergency numbers</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('update_patient_details') }}" class="space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      
+      <!-- Personal Details -->
+      <div>
+        <h3 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">1. Personal & Contact Details</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Patient Full Name</label>
+            <input type="text" name="name" value="{{ patient.name }}" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Age</label>
+            <input type="number" name="age" value="{{ patient.age }}" min="40" max="120" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Gender</label>
+            <select name="gender" class="w-full px-3 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main bg-white text-xs focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none">
+              <option value="Male" {% if patient.gender == 'Male' %}selected{% endif %}>Male</option>
+              <option value="Female" {% if patient.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option value="Other" {% if patient.gender == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Phone Number (Sign In ID)</label>
+            <input type="text" name="phone" value="{{ patient.phone }}" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Set new password/PIN (leave blank to keep current)</label>
+            <input type="password" name="pin" value="" minlength="6" maxlength="128" autocomplete="new-password"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs tracking-widest text-center">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Blood Group</label>
+            <input type="text" name="blood_group" value="{{ patient.blood_group }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-bold text-text-main mb-1.5">Home Delivery Address</label>
+            <textarea name="address" rows="2" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-medium text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">{{ patient.address }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medical History -->
+      <div class="pt-4 border-t border-border-subtle">
+        <h3 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">2. Clinical & Medical History</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Medical Conditions / Diagnoses</label>
+            <input type="text" name="medical_conditions" value="{{ patient.medical_conditions }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Known Drug Allergies</label>
+            <input type="text" name="allergies" value="{{ patient.allergies }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-text-main mb-1.5">Mobility Status</label>
+            <input type="text" name="mobility_status" value="{{ patient.mobility_status }}"
+              placeholder="e.g. Independent, Walking Stick, Wheelchair, Bedridden"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+        </div>
+      </div>
+
+      <!-- Caregiver & Doctor -->
+      <div class="pt-4 border-t border-border-subtle">
+        <h3 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">3. Caregiver & Doctor Contact</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Caregiver Name</label>
+            <input type="text" name="caregiver_name" value="{{ patient.caregiver_name }}" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Caregiver Phone</label>
+            <input type="text" name="caregiver_phone" value="{{ patient.caregiver_phone }}" required
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Relationship</label>
+            <input type="text" name="caregiver_relation" value="{{ patient.caregiver_relation }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-text-main mb-1.5">Family Doctor / Geriatrician</label>
+            <input type="text" name="doctor_name" value="{{ patient.doctor_name }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-text-main mb-1.5">Doctor Phone</label>
+            <input type="text" name="doctor_phone" value="{{ patient.doctor_phone }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-border-subtle font-bold text-text-main focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 flex justify-end">
+        <button type="submit" class="bg-primary-500 hover:bg-primary-600 active:scale-95 text-white font-extrabold text-xs px-8 py-3.5 rounded-2xl shadow-sm transition flex items-center gap-2 uppercase tracking-wider">
+          <i class="fa-solid fa-floppy-disk text-sm"></i>
+          <span>Save Changes</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+    <section class="bg-white rounded-2xl border border-border-subtle p-5">
+      <h3 class="font-extrabold text-sm text-text-main mb-2">Reminder and notification consent</h3>
+      <p class="text-xs text-text-muted mb-3">Notifications stay off unless you opt in. You can change this at any time.</p>
+      <form method="POST" action="{{ url_for('update_notification_preferences') }}" class="space-y-2 text-xs">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="flex items-start gap-2 font-semibold"><input type="checkbox" name="reminder_consent" {% if patient.reminder_consent %}checked{% endif %}><span>I consent to automated reminders and related notifications.</span></label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="sms_enabled" {% if patient.sms_notifications_enabled %}checked{% endif %}>SMS</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="voice_enabled" {% if patient.voice_notifications_enabled %}checked{% endif %}>Voice calls</label>
+        <label class="flex items-center gap-2"><input type="checkbox" name="refill_enabled" {% if patient.refill_reminders_enabled %}checked{% endif %}>Refill reminders</label>
+        <button type="submit" class="mt-2 px-4 py-2 rounded-xl bg-primary-500 text-white font-bold">Save preferences</button>
+      </form>
+    </section>
+
+    {% if user_role == 'PATIENT' %}
+    <section class="bg-white rounded-2xl border border-border-subtle p-5">
+      <h3 class="font-extrabold text-sm text-text-main mb-2">Authorize a caregiver</h3>
+      <p class="text-xs text-text-muted mb-3">First save the caregiver's name and phone above. Generate a one-time invitation and share it privately with that person. It expires after 24 hours.</p>
+      <form method="POST" action="{{ url_for('create_caregiver_invite') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold">Generate caregiver invitation</button>
+      </form>
+      {% if patient.caregiver_authorized %}
+      <form method="POST" action="{{ url_for('revoke_caregiver_access') }}" class="mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="px-4 py-2 rounded-xl border border-rose-300 text-rose-700 font-bold">Revoke caregiver access</button>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function toggleEditMode() {
+  const el = document.getElementById('edit-patient-section');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+    el.classList.add('ring-4', 'ring-primary-200');
+    setTimeout(() => el.classList.remove('ring-4', 'ring-primary-200'), 1500);
+  }
+}
+</script>
+{% endblock %}

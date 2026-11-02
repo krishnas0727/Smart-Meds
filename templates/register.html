@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Patient Profile — ElderCare MedTrack</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #FFF4F3;
+      color: #30343B;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 selection:bg-[#FCDAD7] selection:text-[#842B25]">
+
+  <div class="max-w-3xl mx-auto space-y-6">
+    
+    <!-- TOP NAV LINK -->
+    <div class="flex items-center justify-between">
+      <a href="{{ url_for('signin') }}" class="text-xs font-bold text-[#30343B] hover:text-[#E07067] transition flex items-center gap-2 bg-white px-3.5 py-2 rounded-2xl border border-[#EAECEF] shadow-sm">
+        <i class="fa-solid fa-arrow-left text-[#F28B82]"></i>
+        <span>Back to Sign In</span>
+      </a>
+
+      <div class="flex items-center gap-2 text-xs font-bold text-[#E07067] bg-[#FDECEB] px-3 py-1 rounded-full border border-[#FCDAD7]">
+        <i class="fa-solid fa-shield-heart text-[#F28B82]"></i>
+        <span>ElderCare MedTrack Onboarding</span>
+      </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-[#EAECEF] space-y-1">
+      <span class="bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-2 inline-block">
+        New Patient Registration
+      </span>
+      <h1 class="text-2xl sm:text-3xl font-black text-[#30343B] tracking-tight font-['Outfit']">
+        Create Senior Patient Profile
+      </h1>
+      <p class="text-[#777D87] text-xs sm:text-sm font-medium mt-1">
+        Register patient clinical conditions, medicine schedule, and primary caregiver contact to activate voice alarms and doorstep refill tracking.
+      </p>
+    </div>
+
+    <!-- REGISTRATION FORM -->
+    <form method="POST" action="{{ url_for('register') }}" class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-[#EAECEF] space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      
+      <!-- SECTION 1: PERSONAL & CONTACT DETAILS -->
+      <div>
+        <h2 class="text-base font-black text-[#30343B] flex items-center gap-2 mb-4 pb-2 border-b border-[#EAECEF]">
+          <i class="fa-solid fa-user text-[#F28B82]"></i>
+          <span>1. Personal & Contact Information</span>
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Full Name *</label>
+            <input type="text" name="name" placeholder="e.g. Senior Patient" required
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Age *</label>
+              <input type="number" name="age" min="40" max="120" value="70" required
+                class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Gender</label>
+              <select name="gender" class="w-full px-3 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] text-xs sm:text-sm">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Phone Number (Login ID) *</label>
+            <input type="tel" name="phone" placeholder="10-digit mobile number" required
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Password / PIN (6–128 characters) *</label>
+              <input type="password" name="pin" minlength="6" maxlength="128" autocomplete="new-password" required
+                class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-black text-center text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm tracking-widest">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Blood Group</label>
+              <select name="blood_group" class="w-full px-3 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] text-xs sm:text-sm">
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Residence Delivery Address *</label>
+            <textarea name="address" rows="2" placeholder="Full house number, street, city for doorstep medicine delivery" required
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: CLINICAL & HEALTH PROFILE -->
+      <div class="pt-4 border-t border-[#EAECEF]">
+        <h2 class="text-base font-black text-[#30343B] flex items-center gap-2 mb-4 pb-2 border-b border-[#EAECEF]">
+          <i class="fa-solid fa-heart-pulse text-rose-500"></i>
+          <span>2. Clinical & Health Profile</span>
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Medical Conditions / Diagnoses</label>
+            <input type="text" name="medical_conditions" placeholder="e.g. Type 2 Diabetes, Hypertension, Osteoarthritis"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Known Drug Allergies</label>
+            <input type="text" name="allergies" placeholder="e.g. Penicillin, Sulfa drugs (or None)"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Mobility Status</label>
+            <select name="mobility_status" class="w-full px-3 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] text-xs sm:text-sm">
+              <option value="Independent">Independent</option>
+              <option value="Uses Walking Stick">Uses Walking Stick</option>
+              <option value="Uses Walker">Uses Walker</option>
+              <option value="Wheelchair Bound">Wheelchair Bound</option>
+              <option value="Bedridden">Bedridden</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: CAREGIVER & DOCTOR DETAILS -->
+      <div class="pt-4 border-t border-[#EAECEF]">
+        <h2 class="text-base font-black text-[#30343B] flex items-center gap-2 mb-4 pb-2 border-b border-[#EAECEF]">
+          <i class="fa-solid fa-user-doctor text-[#65B9A9]"></i>
+          <span>3. Primary Caregiver & Geriatrician Contacts</span>
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Caregiver Name *</label>
+            <input type="text" name="caregiver_name" placeholder="e.g. Suresh Kumar" required
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Caregiver Mobile *</label>
+            <input type="tel" name="caregiver_phone" placeholder="10-digit mobile number" required
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Relationship</label>
+            <input type="text" name="caregiver_relation" placeholder="e.g. Son, Daughter, Nurse" value="Son"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Family Doctor / Geriatrician</label>
+            <input type="text" name="doctor_name" placeholder="e.g. Dr. K. S. Rajan, MD"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Doctor Phone</label>
+            <input type="tel" name="doctor_phone" placeholder="e.g. 0452-2531000"
+              class="w-full px-4 py-2.5 rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none text-xs sm:text-sm">
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBMIT BUTTON -->
+      <div class="pt-4 border-t border-[#EAECEF]">
+        <button type="submit" class="w-full bg-[#F28B82] hover:bg-[#E07067] active:scale-95 text-white font-extrabold text-sm sm:text-base py-3.5 rounded-2xl shadow-pastel transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-user-plus text-base"></i>
+          <span>Complete Registration & Enter Dashboard</span>
+        </button>
+
+        <div class="text-center pt-3">
+          <a href="{{ url_for('signin') }}" class="text-xs text-[#777D87] font-bold hover:underline">
+            Already registered? Back to Sign In &rarr;
+          </a>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+
+</body>
+</html>

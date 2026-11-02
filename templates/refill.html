@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Doorstep Medicine Refill — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- ==================== HERO BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 space-y-2">
+      <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067]">
+        <i class="fa-solid fa-truck-medical text-[#F28B82]"></i>
+        <span>Free Senior Doorstep Refill Service</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+        Doorstep Medicine Refill Request
+      </h1>
+      <p class="text-[#777D87] text-xs sm:text-sm font-medium mt-1 leading-relaxed max-w-2xl">
+        No need to travel to medical shops outside. Certified chemists package and deliver your exact prescribed medicines straight to your front door with Cash on Delivery.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== REFILL ORDER FORM ==================== -->
+  <form method="POST" action="{{ url_for('refill') }}" class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    
+    <!-- STEP 1: SELECT MEDICINES -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">1</span>
+            <span>Select Medicines to Refill</span>
+          </h2>
+          <p class="text-[11px] text-[#777D87] font-semibold ml-8 mt-0.5">Low-stock medicines have been pre-selected for your convenience</p>
+        </div>
+        <button type="button" onclick="selectAllMeds()" class="text-xs font-bold text-[#E07067] hover:underline">
+          Select All
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        {% for p in prescriptions %}
+        {% set is_low = p.stock_remaining <= p.refill_threshold %}
+        <label class="flex items-start sm:items-center justify-between p-4 rounded-2xl border transition cursor-pointer {% if is_low %}border-[#FCDAD7] bg-[#FFF4F3]{% else %}border-[#EAECEF] hover:border-[#FCDAD7] bg-white{% endif %}">
+          <div class="flex items-start sm:items-center gap-3">
+            <input type="checkbox" name="selected_medicines" value="{{ p.id }}" {% if is_low %}checked{% endif %}
+              class="w-4 h-4 text-[#F28B82] rounded border-[#EAECEF] focus:ring-[#F28B82] mt-1 sm:mt-0 med-checkbox">
+            <div>
+              <div class="text-sm sm:text-base font-bold text-[#30343B]">{{ p.medicine_name }}</div>
+              <div class="text-xs font-medium text-[#777D87]">
+                Dosage: <strong class="text-[#30343B]">{{ p.dosage }}</strong> | 1 Month Supply (30 Tablets)
+              </div>
+            </div>
+          </div>
+
+          <div class="text-right flex-shrink-0">
+            {% if is_low %}
+            <span class="bg-rose-50 text-rose-700 border border-rose-200 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full uppercase">
+              {{ p.stock_remaining }} tabs left!
+            </span>
+            {% else %}
+            <span class="text-[#777D87] font-semibold text-xs">
+              {{ p.stock_remaining }} tabs in hand
+            </span>
+            {% endif %}
+            <div class="text-xs font-bold text-[#30343B] mt-1">₹120 / strip</div>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Option to Order Any Other Medicine -->
+      <div class="mt-4 p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-white text-[#F28B82] flex items-center justify-center font-bold shadow-sm">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+          <div>
+            <span class="font-black text-[#30343B]">Need a medicine not listed in your daily schedule?</span>
+            <p class="text-[11px] text-[#777D87]">Search the complete 117-medicine A-Z catalog and order directly with 1-click.</p>
+          </div>
+        </div>
+        <a href="{{ url_for('medicines_directory') }}" class="bg-white hover:bg-[#FDECEB] text-[#E07067] font-extrabold px-3.5 py-2 rounded-xl border border-[#FCDAD7] transition shadow-sm flex items-center gap-1.5 self-start sm:self-auto flex-shrink-0">
+          <span>Search A-Z Catalog</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- STEP 2: DELIVERY ADDRESS CONFIRMATION -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">2</span>
+        <span>Confirm Delivery Address</span>
+      </h2>
+
+      <div class="bg-[#FFF4F3] p-4 rounded-2xl border border-[#EAECEF] space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-[#777D87] uppercase mb-1">Residence Delivery Address</label>
+          <textarea name="delivery_address" rows="2" required
+            class="w-full bg-white border border-[#EAECEF] rounded-xl p-3 text-xs sm:text-sm font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none">{{ patient.address }}</textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-[#777D87] uppercase mb-1 flex items-center justify-between">
+            <span>Registered Patient Contact Number</span>
+            <span class="text-[10px] font-bold text-[#128C7E] flex items-center gap-1"><i class="fa-brands fa-whatsapp text-xs text-[#25D366]"></i> Optional SMS (requires consent)</span>
+          </label>
+          <input type="text" name="contact_phone" value="{{ patient.phone if patient else '' }}" required
+            class="w-full bg-white border border-[#EAECEF] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-[#30343B] focus:border-[#F28B82] focus:outline-none">
+          <p class="text-[10px] text-[#777D87] mt-1"><i class="fa-brands fa-whatsapp text-[#25D366] mr-1"></i> எந்த எண் கொடுக்கப்பட்டதோ அந்த எண்ணுக்கு WhatsApp live tracking link மற்றும் receipt அனுப்பப்படும்.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-medium text-[#777D87]">
+          <div>
+            <i class="fa-solid fa-phone text-[#F28B82] mr-1"></i> Patient Registered: <strong class="text-[#30343B]">{{ patient.phone }}</strong>
+          </div>
+          <div>
+            <i class="fa-solid fa-user-shield text-[#65B9A9] mr-1"></i> Caregiver Registered: <strong class="text-[#30343B]">{{ patient.caregiver_phone }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: PAYMENT METHOD -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">3</span>
+        <span>Senior-Friendly Payment Method</span>
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Option 1: Cash on Delivery -->
+        <label class="flex items-start gap-3 p-4 rounded-2xl border-2 border-[#F28B82] bg-[#FFF4F3] cursor-pointer">
+          <input type="radio" name="payment_method" value="Cash on Delivery (Doorstep)" checked
+            class="w-4 h-4 text-[#F28B82] focus:ring-[#F28B82] mt-1">
+          <div>
+            <div class="font-bold text-[#30343B] text-xs sm:text-sm flex items-center gap-2">
+              <i class="fa-solid fa-hand-holding-dollar text-[#65B9A9] text-base"></i>
+              <span>Cash on Delivery (Doorstep)</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-0.5">Pay in cash directly to delivery courier upon package arrival.</p>
+          </div>
+        </label>
+
+        <!-- Option 2: UPI / QR Code -->
+        <label class="flex items-start gap-3 p-4 rounded-2xl border border-[#EAECEF] bg-white cursor-pointer hover:bg-[#FFF4F3]">
+          <input type="radio" name="payment_method" value="UPI / QR Code on Delivery"
+            class="w-4 h-4 text-[#F28B82] focus:ring-[#F28B82] mt-1">
+          <div>
+            <div class="font-bold text-[#30343B] text-xs sm:text-sm flex items-center gap-2">
+              <i class="fa-solid fa-qrcode text-indigo-500 text-base"></i>
+              <span>UPI / QR Code on Delivery</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-0.5">Scan courier's GPay / PhonePe QR code when package is delivered.</p>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- SUBMIT ACTION -->
+    <div class="flex items-center justify-between pt-2">
+      <a href="{{ url_for('index') }}" class="text-xs font-bold text-[#777D87] hover:text-[#30343B]">
+        Cancel & Return
+      </a>
+      <button type="submit" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-sm sm:text-base px-8 py-3.5 rounded-2xl shadow-pastel active:scale-95 transition flex items-center gap-2">
+        <i class="fa-solid fa-truck-fast"></i>
+        <span>Place 1-Click Doorstep Refill</span>
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function selectAllMeds() {
+    const checkboxes = document.querySelectorAll('.med-checkbox');
+    const allChecked = Array.from(checkboxes).every(c => c.checked);
+    checkboxes.forEach(c => c.checked = !allChecked);
+  }
+</script>
+{% endblock %}

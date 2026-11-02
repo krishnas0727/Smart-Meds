@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Caregiver Remote Portal — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ==================== HEADER BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div>
+        <span class="inline-block bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full mb-2">
+          Remote Family Caregiver Portal
+        </span>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+          {{ patient.name if patient else 'Senior' }} — Caregiver Oversight
+        </h1>
+        <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1 max-w-2xl">
+          Authorized family portal for {{ patient.caregiver_name if patient else 'Family Caregiver' }} ({{ patient.caregiver_relation if patient else 'Proxy' }}) to monitor regimens, stock levels, and adherence.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <a href="https://api.whatsapp.com/send?phone=91{{ patient.phone if patient else '9840123456' }}&text=Hello%20{{ patient.name if patient else 'Parent' }},%20did%20you%20take%20your%20scheduled%20medicines%20today?" target="_blank"
+          class="bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold px-5 py-3 rounded-2xl shadow-sm flex items-center gap-2 transition active:scale-95 text-sm">
+          <i class="fa-brands fa-whatsapp text-lg"></i>
+          <span>Send WhatsApp Check-in</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LINKED PATIENT SWITCHER ==================== -->
+  {% if linked_patients and linked_patients|length > 1 %}
+  <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-card border border-[#EAECEF] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="flex items-center gap-2 text-xs font-black uppercase text-[#30343B] tracking-wider">
+      <i class="fa-solid fa-users text-[#F28B82]"></i>
+      <span>Authorized Linked Relatives ({{ linked_patients|length }}):</span>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% for lp in linked_patients %}
+      <a href="{{ url_for('caregiver', patient_id=lp.id) }}" 
+         class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if lp.id == patient.id %}bg-[#F28B82] text-white shadow-pastel{% else %}bg-[#FFF4F3] text-[#30343B] hover:bg-[#FDECEB] border border-[#EAECEF]{% endif %}">
+        <i class="fa-solid fa-user"></i>
+        <span>{{ lp.name }} (Age {{ lp.age }})</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ==================== CONSENT & CLINICAL TRANSPARENCY CARDS ==================== -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    
+    <!-- Card 1: Consent & Authorization Record -->
+    <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between gap-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase text-[#777D87] tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-[#65B9A9]"></i>
+          <span>Patient Consent & Authorization</span>
+        </span>
+        <span class="text-[10px] font-bold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 px-2 py-0.5 rounded-full">
+          Verified Audit
+        </span>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div class="flex items-center justify-between bg-[#FFF4F3] p-2.5 rounded-xl border border-[#EAECEF]">
+          <span class="font-bold text-[#30343B]">Patient Digital Consent:</span>
+          {% if patient and patient.consent_recorded %}
+          <span class="text-[#3D8577] font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check text-[#65B9A9]"></i> Recorded on File</span>
+          {% else %}
+          <span class="text-amber-700 font-bold flex items-center gap-1"><i class="fa-solid fa-clock"></i> Consent Pending</span>
+          {% endif %}
+        </div>
+        <div class="flex items-center justify-between bg-[#FFF4F3] p-2.5 rounded-xl border border-[#EAECEF]">
+          <span class="font-bold text-[#30343B]">Caregiver Relationship:</span>
+          {% if patient and patient.caregiver_authorized %}
+          <span class="text-[#3D8577] font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check text-[#65B9A9]"></i> Authorized ({{ patient.caregiver_relation }})</span>
+          {% else %}
+          <span class="text-amber-700 font-bold flex items-center gap-1"><i class="fa-solid fa-clock"></i> Authorization Pending</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Clinical Adherence Reality Disclosure -->
+    <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between gap-2">
+      <div class="flex items-center gap-2 text-[#30343B] text-xs font-bold uppercase tracking-wider">
+        <i class="fa-solid fa-circle-info text-[#F28B82] text-sm"></i>
+        <span>Adherence Verification Disclosure</span>
+      </div>
+      <p class="text-xs text-[#777D87] font-medium leading-relaxed">
+        Adherence metrics record <strong>digital dose confirmations logged by the senior or caregiver</strong>. Software cannot biologically detect biochemical pill ingestion. Never change doctor-prescribed doses without consulting the attending geriatrician.
+      </p>
+      <div class="text-[11px] text-[#777D87] font-semibold pt-1 border-t border-[#EAECEF] flex items-center justify-between">
+        <span>Emergency Ambulance: Dial 108</span>
+        <span>Doctor: <strong class="text-[#30343B]">{{ patient.doctor_name if patient else 'Dr. K. S. Rajan' }}</strong></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== ADHERENCE & SAFETY METRICS ==================== -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    
+    <!-- Metric 1: Adherence Score -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF]">
+      <div class="text-xs font-semibold uppercase text-[#777D87]">Today's Adherence</div>
+      <div class="flex items-baseline gap-2 mt-1">
+        <span class="text-3xl font-black text-[#65B9A9]">{{ adherence_pct }}%</span>
+        <span class="text-xs text-[#777D87] font-semibold">({{ taken_today }}/{{ total_prescriptions }})</span>
+      </div>
+      <div class="w-full bg-[#FFF4F3] border border-[#EAECEF] h-2 rounded-full mt-2.5 overflow-hidden">
+        <div class="bg-[#65B9A9] h-full rounded-full transition-all duration-500" style="width: {{ adherence_pct }}%;"></div>
+      </div>
+    </div>
+
+    <!-- Metric 2: Prescribed Regimens -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF]">
+      <div class="text-xs font-semibold uppercase text-[#777D87]">Prescribed Medicines</div>
+      <div class="text-3xl font-black text-[#30343B] mt-1">{{ total_prescriptions }}</div>
+      <div class="text-xs text-[#777D87] font-medium mt-1">Daily active medications</div>
+    </div>
+
+    <!-- Metric 3: Low Stock Warnings -->
+    {% set low_count = prescriptions|selectattr('stock_remaining', 'le', 5)|list|length %}
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF]">
+      <div class="text-xs font-semibold uppercase text-[#777D87]">Low Stock Alert (≤5)</div>
+      <div class="text-3xl font-black {% if low_count > 0 %}text-rose-600 animate-pulse{% else %}text-[#65B9A9]{% endif %} mt-1">
+        {{ low_count }}
+      </div>
+      <div class="text-xs text-[#777D87] font-medium mt-1">Strips requiring refill</div>
+    </div>
+
+    <!-- Metric 4: Family Geriatrician -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF]">
+      <div class="text-xs font-semibold uppercase text-[#777D87]">Family Doctor</div>
+      <div class="text-sm font-bold text-[#30343B] mt-1 truncate">{{ patient.doctor_name if patient else 'Dr. K. S. Rajan' }}</div>
+      <div class="text-xs text-[#E07067] font-bold mt-1 truncate">
+        <i class="fa-solid fa-phone mr-1 text-[10px]"></i> {{ patient.doctor_phone if patient else '0452-2531000' }}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== TWO-COLUMN DETAILS ==================== -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- LEFT COLUMN: RECORDED INVENTORY & RECENT DOSE HISTORY (7 Cols) -->
+    <div class="lg:col-span-7 space-y-6">
+      
+      <!-- Table: Parent's Home Inventory -->
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF]">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-[#EAECEF]">
+          <h2 class="text-lg font-black text-[#30343B] flex items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked text-[#F28B82]"></i>
+            <span>Parent's Medicine Stock Audit</span>
+          </h2>
+          <a href="{{ url_for('refill') }}" class="text-xs font-bold text-[#E07067] hover:underline bg-[#FFF4F3] px-3 py-1.5 rounded-xl border border-[#FCDAD7]">
+            + Request Refill
+          </a>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-[#EAECEF] text-xs font-bold text-[#777D87] uppercase">
+                <th class="py-2.5">Medicine</th>
+                <th class="py-2.5">Dosage</th>
+                <th class="py-2.5 text-center">In Hand</th>
+                <th class="py-2.5 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#EAECEF]">
+              {% for p in prescriptions %}
+              {% set is_critical = p.stock_remaining <= p.refill_threshold %}
+              <tr>
+                <td class="py-3 font-bold text-[#30343B]">{{ p.medicine_name }}</td>
+                <td class="py-3 text-[#777D87] text-xs">{{ p.dosage }}</td>
+                <td class="py-3 text-center font-bold {% if is_critical %}text-rose-600{% else %}text-[#30343B]{% endif %}">
+                  {{ p.stock_remaining }} tabs
+                </td>
+                <td class="py-3 text-right">
+                  {% if is_critical %}
+                  <span class="bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px] px-2.5 py-0.5 rounded-full">
+                    Refill Due
+                  </span>
+                  {% else %}
+                  <span class="bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 font-bold text-[10px] px-2.5 py-0.5 rounded-full">
+                    Safe
+                  </span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Dose History Log -->
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF]">
+        <h3 class="text-base font-black text-[#30343B] mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-[#65B9A9]"></i>
+          <span>Recent Dose History Audit</span>
+        </h3>
+        <div class="space-y-2">
+          {% for log in recent_logs %}
+          <div class="flex items-center justify-between text-xs bg-[#FFF4F3] p-2.5 rounded-xl border border-[#EAECEF]">
+            <div class="flex items-center gap-2">
+              {% if log.status == 'Taken' %}
+              <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+              {% elif log.status == 'Not Taken' %}
+              <i class="fa-solid fa-ban text-rose-500"></i>
+              {% else %}
+              <i class="fa-solid fa-circle-question text-amber-500"></i>
+              {% endif %}
+              <strong class="text-[#30343B]">{{ log.medicine_name }}</strong>
+              <span class="text-[#777D87]">({{ log.dose_time }})</span>
+            </div>
+            <span class="text-[#777D87] font-semibold">{{ log.logged_at }}</span>
+          </div>
+          {% else %}
+          <p class="text-xs text-[#777D87] py-4 text-center">No dose confirmations recorded yet today.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: ALERTS & AUTOMATED NOTIFICATIONS (5 Cols) -->
+    <div class="lg:col-span-5 space-y-4">
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF]">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-[#EAECEF]">
+          <h2 class="text-lg font-black text-[#30343B] flex items-center gap-2">
+            <i class="fa-solid fa-bell text-[#F28B82]"></i>
+            <span>Caregiver Alerts & Logs</span>
+          </h2>
+          <span class="text-[11px] font-bold text-[#777D87] bg-[#FFF4F3] px-2 py-0.5 rounded-lg">Latest</span>
+        </div>
+
+        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+          {% for alert in alerts %}
+          <div class="p-3.5 rounded-2xl border flex items-start gap-3 bg-[#FFF4F3] border-[#EAECEF]">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0
+              {% if alert.alert_type == 'SOS' %}bg-rose-500 text-white
+              {% elif alert.alert_type == 'AUTO_DISPATCH_PHARMACY' %}bg-[#65B9A9] text-white
+              {% elif alert.alert_type == 'LOW_STOCK' %}bg-amber-400 text-slate-900
+              {% elif alert.alert_type == 'SKIPPED_DOSE' %}bg-rose-400 text-white
+              {% else %}bg-[#F28B82] text-white{% endif %}">
+              {% if alert.alert_type == 'SOS' %}<i class="fa-solid fa-triangle-exclamation"></i>
+              {% elif alert.alert_type == 'AUTO_DISPATCH_PHARMACY' %}<i class="fa-solid fa-truck-medical"></i>
+              {% elif alert.alert_type == 'LOW_STOCK' %}<i class="fa-solid fa-boxes-stacked"></i>
+              {% elif alert.alert_type == 'SKIPPED_DOSE' %}<i class="fa-solid fa-ban"></i>
+              {% else %}<i class="fa-solid fa-bell"></i>{% endif %}
+            </div>
+
+            <div class="flex-grow text-xs">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-[#30343B]">
+                  {% if alert.alert_type == 'AUTO_DISPATCH_PHARMACY' %}Chemist Auto-Dispatch (Simulated)
+                  {% elif alert.alert_type == 'AUTO_SMS_PATIENT' %}Auto-SMS (In-App / Simulated)
+                  {% elif alert.alert_type == 'DOSE_UNCONFIRMED' %}Dose Unconfirmed
+                  {% elif alert.alert_type == 'LOW_STOCK' %}Low Stock Warning
+                  {% elif alert.alert_type == 'SOS' %}Emergency SOS Alert
+                  {% elif alert.alert_type == 'SKIPPED_DOSE' %}Dose Skipped
+                  {% elif alert.alert_type == 'STOCK_CORRECTION' %}Physical Stock Recount
+                  {% else %}{{ alert.alert_type }}{% endif %}
+                </span>
+                <span class="text-[10px] text-[#777D87] font-semibold">{{ alert.created_at[:16] }}</span>
+              </div>
+              <p class="text-[#777D87] mt-1 leading-relaxed font-medium">{{ alert.message }}</p>
+            </div>
+          </div>
+          {% else %}
+          <p class="text-center py-8 text-[#777D87] font-medium text-xs">No active alerts. All routines are running on schedule!</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== MARKET BENCHMARK CARDS ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-5">
+    <div class="pb-3 border-b border-[#EAECEF]">
+      <span class="inline-block bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-1">
+        Senior Accessibility Innovation
+      </span>
+      <h2 class="text-xl sm:text-2xl font-black text-[#30343B]">
+        Why ElderCare MedTrack Solves Real-World Senior Challenges
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Card 1 -->
+      <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#EAECEF] space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-rose-600">
+          <span>Ordinary Apps: Silent Flaw</span>
+          <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+        <p class="text-xs text-[#777D87]">Silent push notifications missed by seniors with vision or hearing difficulties.</p>
+        <div class="pt-2 border-t border-[#EAECEF] text-xs font-bold text-[#3D8577] flex items-center justify-between">
+          <span>ElderCare Advantage</span>
+          <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+        </div>
+        <p class="text-xs font-bold text-[#30343B]">🔊 Audio voice readouts, pleasant chime confirmations, and large readable fonts.</p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#EAECEF] space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-rose-600">
+          <span>Ordinary Apps: Smartphone Lock-in</span>
+          <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+        <p class="text-xs text-[#777D87]">Requires elderly patient to operate a smartphone and navigate complicated screens.</p>
+        <div class="pt-2 border-t border-[#EAECEF] text-xs font-bold text-[#3D8577] flex items-center justify-between">
+          <span>ElderCare Advantage</span>
+          <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+        </div>
+        <p class="text-xs font-bold text-[#30343B]">📞 Landline telephone-assisted orders, printable refrigerator chart, and remote family management.</p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#EAECEF] space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-rose-600">
+          <span>Ordinary Apps: Emergency Gap</span>
+          <i class="fa-solid fa-circle-xmark"></i>
+        </div>
+        <p class="text-xs text-[#777D87]">No crisis features. If a senior falls or suffers chest pain, commercial apps offer zero help.</p>
+        <div class="pt-2 border-t border-[#EAECEF] text-xs font-bold text-[#3D8577] flex items-center justify-between">
+          <span>ElderCare Advantage</span>
+          <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+        </div>
+        <p class="text-xs font-bold text-[#30343B]">🚨 1-Tap Emergency SOS broadcasting to caregiver and 108 ambulance speed dial.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

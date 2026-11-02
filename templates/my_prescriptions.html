@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block title %}Medicine Tracker & Pill Inventory — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-7">
+
+  <!-- ==================== HEADER BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div>
+        <span class="inline-block bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full mb-2">
+          Pill Inventory & Adherence
+        </span>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+          Medicine Tracker & Home Inventory
+        </h1>
+        <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1 max-w-2xl">
+          Track home pill counts, algorithmic depletion rates, and verified physical audits.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-2.5 flex-shrink-0">
+        <a href="{{ url_for('refill') }}" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold px-5 py-3 rounded-2xl shadow-pastel flex items-center gap-2 transition active:scale-95 text-sm">
+          <i class="fa-solid fa-truck-fast"></i>
+          <span>Order Refill</span>
+        </a>
+        <a href="{{ url_for('print_schedule_card') }}" class="bg-white hover:bg-[#FFF4F3] text-[#30343B] border border-[#EAECEF] font-bold px-4 py-3 rounded-2xl transition flex items-center gap-2 text-sm shadow-sm">
+          <i class="fa-solid fa-print text-[#777D87]"></i>
+          <span>Print Chart</span>
+        </a>
+        <a href="{{ url_for('medicines_directory') }}" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7] font-bold px-4 py-3 rounded-2xl transition flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-book-medical"></i>
+          <span>A–Z Catalog</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SUMMARY METRIC CARDS ==================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-capsules"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider">Active Prescriptions</div>
+        <div class="text-2xl font-black text-[#30343B] mt-0.5">{{ prescriptions|length }} Regimens</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider">Low Stock (≤ 5 tabs)</div>
+        <div class="text-2xl font-black text-rose-600 mt-0.5">
+          {{ prescriptions|selectattr('stock_remaining', 'le', 5)|list|length }} Running Out
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-[#EBF6F4] text-[#65B9A9] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-shield-heart"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider">Sufficient Supply</div>
+        <div class="text-2xl font-black text-[#65B9A9] mt-0.5">
+          {{ prescriptions|selectattr('stock_remaining', 'gt', 5)|list|length }} In Good Supply
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TWO-COLUMN WORKFLOW LAYOUT ==================== -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- ==================== LEFT COLUMN: PRESCRIPTIONS LIST (7 Cols) ==================== -->
+    <div class="lg:col-span-7 space-y-4">
+      
+      <!-- List Controls: Title & Instant Filter -->
+      <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-card border border-[#EAECEF] flex flex-col sm:flex-row items-center justify-between gap-3">
+        <h2 class="text-lg font-black text-[#30343B] flex items-center gap-2">
+          <i class="fa-solid fa-clipboard-check text-[#F28B82]"></i>
+          <span>Prescriptions List ({{ prescriptions|length }})</span>
+        </h2>
+        <div class="w-full sm:w-64 relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[#777D87]"></i>
+          <input type="text" id="filter-prescriptions" onkeyup="filterPrescriptionCards()" placeholder="Filter medicines..." 
+            class="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82]">
+        </div>
+      </div>
+
+      <!-- Prescriptions Cards List -->
+      <div id="prescriptions-container" class="space-y-4">
+        {% for p in prescriptions %}
+        {% set is_critical = p.stock_remaining <= p.refill_threshold %}
+        <div class="rx-card bg-white rounded-3xl p-5 sm:p-6 shadow-card border transition {% if is_critical %}border-rose-300 bg-rose-50/20{% else %}border-[#EAECEF] hover:border-[#FCDAD7]{% endif %}" data-name="{{ p.medicine_name|lower }}">
+          
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-sm" style="background-color: {{ p.color_code or '#F28B82' }};">
+                <i class="fa-solid fa-pills"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#30343B] leading-snug">{{ p.medicine_name }}</h3>
+                <div class="flex flex-wrap items-center gap-2 mt-1 text-xs font-bold text-[#777D87]">
+                  <span class="bg-[#FFF4F3] border border-[#FCDAD7] text-[#30343B] px-2 py-0.5 rounded-md">{{ p.dosage }}</span>
+                  <span class="bg-[#FFF4F3] border border-[#EAECEF] text-[#E07067] px-2 py-0.5 rounded-md">{{ p.timing }} ({{ p.schedule_time or '08:00' }} IST)</span>
+                  <span class="text-[#777D87] font-semibold"><i class="fa-regular fa-clock mr-1"></i>{{ p.timing_advice }}</span>
+                  {% if p.sms_reminder_enabled %}
+                  <span class="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-black"><i class="fa-solid fa-comment-sms mr-0.5"></i> SMS</span>
+                  {% endif %}
+                  {% if p.voice_reminder_enabled %}
+                  <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-black"><i class="fa-solid fa-phone mr-0.5"></i> Voice</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {% if is_critical %}
+            <span class="bg-rose-500 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-full uppercase tracking-wider flex-shrink-0 animate-pulse">
+              Low Stock
+            </span>
+            {% else %}
+            <span class="bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 font-bold text-[11px] px-2.5 py-1 rounded-full flex-shrink-0">
+              Adequate
+            </span>
+            {% endif %}
+          </div>
+
+          <!-- Stock Progress Gauge -->
+          <div class="mt-4 space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-[#777D87]">Home Inventory:</span>
+              <span class="{% if is_critical %}text-rose-600 font-extrabold{% else %}text-[#30343B]{% endif %}">
+                {{ p.stock_remaining }} tablets in hand (~{{ (p.stock_remaining / (p.daily_doses or 1))|round(1) }} days left)
+              </span>
+            </div>
+
+            {% set pct = (p.stock_remaining / 30 * 100) if (p.stock_remaining / 30 * 100) < 100 else 100 %}
+            <div class="w-full h-2.5 rounded-full bg-[#FFF4F3] border border-[#EAECEF] overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 {% if is_critical %}bg-rose-500{% elif p.stock_remaining < 12 %}bg-amber-400{% else %}bg-[#65B9A9]{% endif %}" style="width: {{ pct }}%;"></div>
+            </div>
+            <div class="text-[10px] text-[#777D87] font-medium flex justify-between">
+              <span>0 Tabs</span>
+              <span>Refill threshold: {{ p.refill_threshold }} tabs</span>
+              <span>30+ (Full supply)</span>
+            </div>
+          </div>
+
+          {% if p.doctor_notes %}
+          <div class="mt-3 text-xs bg-[#FFF4F3] border border-[#EAECEF] p-2.5 rounded-xl text-[#30343B] font-medium">
+            <i class="fa-solid fa-stethoscope text-[#F28B82] mr-1"></i> <strong>Doctor's Advice:</strong> {{ p.doctor_notes }}
+          </div>
+          {% endif %}
+
+          <!-- Physical Recount Audit Form & Delete Action -->
+          <div class="mt-4 pt-3.5 border-t border-[#EAECEF] space-y-2.5">
+            <form method="POST" action="{{ url_for('update_stock', prescription_id=p.id) }}" class="flex flex-wrap items-center gap-2 text-xs">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <div class="flex items-center gap-1.5">
+                <label class="text-[11px] font-bold text-[#777D87]">Count Audit:</label>
+                <input type="number" name="stock_remaining" value="{{ p.stock_remaining }}" min="0" max="300"
+                  class="w-16 px-2 py-1 text-xs font-bold border border-[#EAECEF] rounded-lg text-center bg-white text-[#30343B]" title="Update physical count">
+              </div>
+              <select name="correction_reason" class="text-[11px] font-semibold border border-[#EAECEF] rounded-lg px-2 py-1 bg-white text-[#30343B]">
+                <option value="Physical bottle count verified">Bottle recount verified</option>
+                <option value="Spilled or damaged tablets">Spilled / damaged tablets</option>
+                <option value="Extra strip acquired offline">Offline strip acquired</option>
+                <option value="Dosage temporarily adjusted">Dosage adjusted by doctor</option>
+              </select>
+              <button type="submit" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7] text-xs font-bold px-3 py-1 rounded-lg transition">
+                Save Count
+              </button>
+            </form>
+
+            <div class="flex items-center justify-between pt-1">
+              <div>
+                {% if is_critical %}
+                <a href="{{ url_for('refill') }}" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition shadow-pastel flex items-center gap-1.5">
+                  <i class="fa-solid fa-truck-fast"></i>
+                  <span>Refill Now</span>
+                </a>
+                {% endif %}
+              </div>
+
+              <form method="POST" action="{{ url_for('delete_prescription', prescription_id=p.id) }}" onsubmit="return confirm('Remove {{ p.medicine_name }} from your active daily schedule?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="text-[#777D87] hover:text-rose-600 transition text-xs font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-trash-can text-[11px]"></i>
+                  <span>Remove</span>
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ==================== RIGHT COLUMN: QUICK ADD & FORECAST (5 Cols) ==================== -->
+    <div class="lg:col-span-5 space-y-6">
+      
+      <!-- CARD 1: QUICK ADD MEDICINE SCHEDULE FORM -->
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF]">
+        <div class="flex items-center gap-2.5 pb-3 border-b border-[#EAECEF] mb-4">
+          <div class="w-9 h-9 rounded-xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-[#30343B]">Add Medicine to Schedule</h3>
+            <p class="text-[11px] text-[#777D87]">Set daily dosage, slot timing, and starting stock</p>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('add_prescription') }}" class="space-y-3.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          
+          <!-- Medicine Name (Select from Catalog or Type) -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">Medicine Name <span class="text-rose-500">*</span></label>
+            <input list="medicine-suggestions" name="medicine_name" required placeholder="Type or select medicine (e.g. Metformin)..."
+              class="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+            <datalist id="medicine-suggestions">
+              {% for med in all_medicines %}
+              <option value="{{ med.name }}">{{ med.standard_strength }}</option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Dosage & Strength -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Dosage Form</label>
+              <input type="text" name="dosage" value="500 mg" required placeholder="e.g. 500 mg, 1 Tab"
+                class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Schedule Slot</label>
+              <select name="timing" class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+                <option value="Morning">Morning (காலை)</option>
+                <option value="Afternoon">Afternoon (மதியம்)</option>
+                <option value="Evening">Evening (மாலை)</option>
+                <option value="Night">Night (இரவு)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Timing Advice & Starting Stock -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Meal Advice</label>
+              <select name="timing_advice" class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+                <option value="After Food">After Food (உணவுக்குப் பின்)</option>
+                <option value="Before Food">Before Food (உணவுக்கு முன்)</option>
+                <option value="With Full Glass of Water">With Water (தண்ணீருடன்)</option>
+                <option value="Before Bed">Before Bed (தூங்குவதற்கு முன்)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Initial Stock (Pills)</label>
+              <input type="number" name="stock_remaining" value="30" min="1" max="500" required
+                class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+            </div>
+          </div>
+
+          <!-- Alert Threshold & Notes -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Alert Below</label>
+              <input type="number" name="refill_threshold" value="5" min="1" max="50" required
+                class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-[#30343B] mb-1">Doctor Instructions</label>
+              <input type="text" name="doctor_notes" placeholder="e.g. Take after breakfast with water"
+                class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+            </div>
+          </div>
+
+          <!-- Time-based Telephony Reminders (SMS & Voice) -->
+          <div class="bg-[#FFF4F3] border border-[#FCDAD7] rounded-2xl p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-[#30343B] flex items-center gap-1.5">
+                <i class="fa-solid fa-clock text-[#F28B82]"></i> Reminder Time & Channels
+              </span>
+              <span class="text-[10px] font-bold text-[#777D87] bg-white px-2 py-0.5 rounded-lg border border-[#EAECEF]">Asia/Kolkata (IST)</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-[#30343B] mb-1">Exact Time (HH:MM)</label>
+                <input type="time" name="schedule_time" value="08:00" required
+                  class="w-full px-3 py-1.5 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B]">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-[#30343B] mb-1">Timezone</label>
+                <input type="text" name="timezone" value="Asia/Kolkata" readonly
+                  class="w-full px-3 py-1.5 text-xs font-semibold rounded-xl border border-[#EAECEF] bg-slate-50 text-[#777D87]">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <label class="flex items-center gap-2 text-xs font-bold text-[#30343B] cursor-pointer bg-white p-2 rounded-xl border border-[#EAECEF] hover:border-[#F28B82] transition">
+                <input type="checkbox" name="sms_reminder_enabled" value="1" checked class="w-4 h-4 text-[#F28B82] rounded focus:ring-0">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-comment-sms text-sky-500"></i> SMS Alert</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs font-bold text-[#30343B] cursor-pointer bg-white p-2 rounded-xl border border-[#EAECEF] hover:border-[#F28B82] transition">
+                <input type="checkbox" name="voice_reminder_enabled" value="1" checked class="w-4 h-4 text-[#F28B82] rounded focus:ring-0">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-phone-volume text-emerald-500"></i> Voice Call</span>
+              </label>
+            </div>
+
+            <label class="flex items-center gap-2 text-[11px] font-semibold text-[#777D87] pt-0.5">
+              <input type="checkbox" name="reminder_consent" value="1" checked class="w-3.5 h-3.5 text-[#F28B82] rounded">
+              <span>Patient consents to automated reminders (respects 22:00-06:00 quiet hours)</span>
+            </label>
+          </div>
+
+          <button type="submit" class="w-full py-3 rounded-2xl bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-sm shadow-pastel transition active:scale-95 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus-circle"></i>
+            <span>Add to Daily Schedule</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- CARD 2: ALGORITHMIC PREDICTIVE REFILL FORECAST -->
+      {% if forecast_data %}
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+          <div>
+            <span class="inline-block bg-[#EBF6F4] text-[#3D8577] text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-1">
+              Predictive Burn Rate
+            </span>
+            <h3 class="text-base font-black text-[#30343B]">Refill Depletion Forecast</h3>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-[#777D87]">Safety Score</div>
+            <div class="text-xl font-black text-[#65B9A9]">{{ forecast_data.safety_score }}%</div>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          {% for fc in forecast_data.forecasts %}
+          <div class="bg-[#FFF4F3] rounded-2xl p-3 border border-[#EAECEF] text-xs space-y-1">
+            <div class="flex items-start justify-between">
+              <strong class="text-[#30343B] font-bold">{{ fc.medicine_name }}</strong>
+              <span class="text-[10px] font-black px-2 py-0.5 rounded-full {{ fc.badge_color }}">
+                {{ fc.urgency_label }}
+              </span>
+            </div>
+            <div class="flex justify-between text-[#777D87]">
+              <span>Stock: <strong class="text-[#30343B]">{{ fc.stock_remaining }} tabs</strong></span>
+              <span>Burn: <strong class="text-[#30343B]">{{ fc.burn_rate_per_day }} tab/day</strong></span>
+              <span>Runout: <strong class="{% if fc.is_refill_due %}text-rose-600 font-black animate-pulse{% else %}text-[#65B9A9]{% endif %}">{{ fc.runout_date_formatted }}</strong></span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterPrescriptionCards() {
+    const q = document.getElementById("filter-prescriptions").value.toLowerCase().trim();
+    const cards = document.querySelectorAll(".rx-card");
+    cards.forEach(card => {
+      const name = card.getAttribute("data-name") || "";
+      if (name.includes(q)) {
+        card.style.display = "block";
+      } else {
+        card.style.display = "none";
+      }
+    });
+  }
+</script>
+{% endblock %}

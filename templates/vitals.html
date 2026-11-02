@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Senior Health Vitals Monitor — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ==================== HEADER BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div>
+        <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067] mb-2">
+          <i class="fa-solid fa-heart-pulse text-[#F28B82]"></i>
+          <span>முதியோர் ரத்த அழுத்தம் & சர்க்கரை பதிவு • Senior Clinical Vitals</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+          Health Vitals Monitor
+        </h1>
+        <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1 max-w-2xl leading-relaxed">
+          Record daily Blood Pressure (BP) and Blood Glucose levels for <strong class="text-[#30343B]">{{ patient.name if patient else 'Senior Citizen' }}</strong>. Automatic clinical evaluation with emergency caregiver SMS safety alerts.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+        <a href="#vitals-form-section" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-black px-5 py-3 rounded-2xl shadow-pastel flex items-center gap-2 transition active:scale-95 text-xs sm:text-sm">
+          <i class="fa-solid fa-plus-circle text-base"></i>
+          <span>Log New Measurement</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4 METRIC CARDS ==================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <!-- 1. Latest BP Card -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-[#777D87] uppercase tracking-wider">Latest Blood Pressure</span>
+        <div class="w-9 h-9 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-sm shadow-sm">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-2xl sm:text-3xl font-black text-[#30343B]">{{ stats.latest_bp }}</span>
+        <span class="text-xs font-semibold text-[#777D87]">mmHg</span>
+      </div>
+      <div class="flex items-center justify-between text-xs pt-1 border-t border-[#EAECEF]">
+        <span class="inline-flex items-center gap-1 font-bold
+          {% if stats.latest_bp_status == 'NORMAL' %}text-[#3D8577]
+          {% elif stats.latest_bp_status == 'ELEVATED' %}text-amber-700
+          {% else %}text-rose-700{% endif %}">
+          <i class="fa-solid fa-circle text-[8px]"></i>
+          {{ stats.latest_bp_status }}
+        </span>
+        <span class="text-[11px] text-[#777D87] font-medium">{{ stats.latest_bp_time[:10] }}</span>
+      </div>
+    </div>
+
+    <!-- 2. Latest Pulse Card -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-[#777D87] uppercase tracking-wider">Heart Rate / Pulse</span>
+        <div class="w-9 h-9 rounded-2xl bg-[#EBF6F4] text-[#65B9A9] flex items-center justify-center text-sm shadow-sm">
+          <i class="fa-solid fa-wave-square"></i>
+        </div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-2xl sm:text-3xl font-black text-[#30343B]">{{ stats.latest_bp_pulse }}</span>
+        <span class="text-xs font-semibold text-[#777D87]">BPM</span>
+      </div>
+      <div class="flex items-center justify-between text-xs pt-1 border-t border-[#EAECEF]">
+        <span class="text-[#3D8577] font-bold text-xs"><i class="fa-solid fa-circle-check text-[10px] mr-1"></i> Normal Rhythm</span>
+        <span class="text-[11px] text-[#777D87]">Resting</span>
+      </div>
+    </div>
+
+    <!-- 3. Latest Blood Sugar Card -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-[#777D87] uppercase tracking-wider">Blood Glucose (Sugar)</span>
+        <div class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-sm shadow-sm">
+          <i class="fa-solid fa-droplet"></i>
+        </div>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span class="text-2xl sm:text-3xl font-black text-[#30343B]">{{ stats.latest_sugar }}</span>
+        <span class="text-xs font-semibold text-[#777D87]">mg/dL</span>
+      </div>
+      <div class="flex items-center justify-between text-xs pt-1 border-t border-[#EAECEF]">
+        <span class="inline-flex items-center gap-1 font-bold
+          {% if stats.latest_sugar_status == 'NORMAL' %}text-[#3D8577]
+          {% elif stats.latest_sugar_status == 'ELEVATED' %}text-amber-700
+          {% else %}text-rose-700{% endif %}">
+          <i class="fa-solid fa-circle text-[8px]"></i>
+          {{ stats.latest_sugar_type }} ({{ stats.latest_sugar_status }})
+        </span>
+        <span class="text-[11px] text-[#777D87] font-medium">{{ stats.latest_sugar_time[:10] }}</span>
+      </div>
+    </div>
+
+    <!-- 4. 7-Day Clinical Averages Card -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-[#777D87] uppercase tracking-wider">7-Day Moving Averages</span>
+        <div class="w-9 h-9 rounded-2xl bg-[#FFF4F3] text-[#E07067] flex items-center justify-center text-sm shadow-sm">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+      </div>
+      <div class="space-y-1 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-[#777D87]">Avg Blood Pressure:</span>
+          <strong class="text-[#30343B] font-black">{{ stats.avg_sys }}/{{ stats.avg_dia }} mmHg</strong>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[#777D87]">Avg Blood Glucose:</span>
+          <strong class="text-[#30343B] font-black">{{ stats.avg_sugar }} mg/dL</strong>
+        </div>
+      </div>
+      <div class="text-[11px] text-[#3D8577] font-bold pt-1 border-t border-[#EAECEF] flex items-center gap-1">
+        <i class="fa-solid fa-shield-heart text-[#65B9A9]"></i>
+        <span>Clinical Range Controlled</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== LOGGING FORM SECTION (TABS: BP & SUGAR) ==================== -->
+  <div id="vitals-form-section" class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAECEF]">
+      <div>
+        <h2 class="text-lg sm:text-xl font-black text-[#30343B] flex items-center gap-2">
+          <i class="fa-solid fa-notes-medical text-[#F28B82]"></i>
+          <span>Record New Health Reading</span>
+        </h2>
+        <p class="text-xs font-medium text-[#777D87] mt-0.5">
+          Select measurement type and enter numbers. Clinical warnings will evaluate automatically.
+        </p>
+      </div>
+
+      <!-- Measurement Type Switcher Tabs -->
+      <div class="inline-flex p-1 bg-[#FFF4F3] rounded-2xl border border-[#FCDAD7] text-xs font-bold">
+        <button type="button" onclick="switchVitalTab('bp')" id="tab-btn-bp"
+                class="px-5 py-2 rounded-xl transition bg-white text-[#E07067] shadow-sm font-black flex items-center gap-1.5">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <span>Blood Pressure (BP)</span>
+        </button>
+        <button type="button" onclick="switchVitalTab('sugar')" id="tab-btn-sugar"
+                class="px-5 py-2 rounded-xl transition text-[#777D87] hover:text-[#30343B] font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-droplet"></i>
+          <span>Blood Sugar (Glucose)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: BLOOD PRESSURE FORM -->
+    <div id="vital-tab-bp">
+      <form method="POST" action="{{ url_for('log_vital') }}" class="space-y-5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="vital_type" value="BP">
+        <input type="hidden" name="patient_id" value="{{ patient.id if patient else 1 }}">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Systolic -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">
+              Systolic BP (Top Number) <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" name="systolic" id="bp-systolic" min="60" max="250" value="120" required
+                     class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-lg font-black text-[#30343B] focus:border-[#F28B82] focus:bg-white focus:outline-none transition">
+              <span class="absolute right-3.5 top-3.5 text-xs font-bold text-[#777D87]">mmHg</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-1">Normal: 90 - 129 mmHg</p>
+          </div>
+
+          <!-- Diastolic -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">
+              Diastolic BP (Bottom Number) <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" name="diastolic" id="bp-diastolic" min="40" max="150" value="80" required
+                     class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-lg font-black text-[#30343B] focus:border-[#F28B82] focus:bg-white focus:outline-none transition">
+              <span class="absolute right-3.5 top-3.5 text-xs font-bold text-[#777D87]">mmHg</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-1">Normal: 60 - 84 mmHg</p>
+          </div>
+
+          <!-- Pulse BPM -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">
+              Pulse / Heart Rate
+            </label>
+            <div class="relative">
+              <input type="number" name="pulse_bpm" id="bp-pulse" min="40" max="180" value="72"
+                     class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-lg font-black text-[#30343B] focus:border-[#F28B82] focus:bg-white focus:outline-none transition">
+              <span class="absolute right-3.5 top-3.5 text-xs font-bold text-[#777D87]">BPM</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-1">Normal: 60 - 100 BPM</p>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <span class="text-xs font-bold text-[#777D87]">Quick Presets:</span>
+          <button type="button" onclick="setBpValues(120, 80, 72, 'Morning baseline test')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            120/80 (Standard Ideal)
+          </button>
+          <button type="button" onclick="setBpValues(126, 82, 74, 'After breakfast and walk')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            126/82 (Post-Activity)
+          </button>
+          <button type="button" onclick="setBpValues(135, 86, 76, 'Mild headache / Evening')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            135/86 (Pre-Hypertension)
+          </button>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Clinical Context / Medication Notes</label>
+          <input type="text" name="notes" id="bp-notes" placeholder="e.g. Taken 30 mins after Telmisartan 40mg with warm water"
+                 class="w-full bg-white border border-[#EAECEF] rounded-xl px-4 py-2.5 text-xs font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none">
+        </div>
+
+        <button type="submit" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-black text-sm px-7 py-3 rounded-2xl shadow-pastel active:scale-95 transition flex items-center gap-2">
+          <i class="fa-solid fa-heart-pulse"></i>
+          <span>Save Blood Pressure Reading</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- TAB 2: BLOOD SUGAR FORM -->
+    <div id="vital-tab-sugar" class="hidden">
+      <form method="POST" action="{{ url_for('log_vital') }}" class="space-y-5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="vital_type" value="BLOOD_SUGAR">
+        <input type="hidden" name="patient_id" value="{{ patient.id if patient else 1 }}">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          
+          <!-- Sugar Glucose Value -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">
+              Blood Glucose Value <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" step="1" name="sugar_value" id="sugar-value" min="30" max="600" value="110" required
+                     class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-lg font-black text-[#30343B] focus:border-[#F28B82] focus:bg-white focus:outline-none transition">
+              <span class="absolute right-3.5 top-3.5 text-xs font-bold text-[#777D87]">mg/dL</span>
+            </div>
+            <p class="text-[11px] text-[#777D87] mt-1">Fasting Normal: 70 - 100 mg/dL | Post-meal: &lt; 140 mg/dL</p>
+          </div>
+
+          <!-- Meal State Selector -->
+          <div>
+            <label class="block text-xs font-bold text-[#30343B] mb-1">
+              Test Timing / Meal State <span class="text-rose-500">*</span>
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="p-3 rounded-2xl border-2 border-[#F28B82] bg-[#FFF4F3] text-center cursor-pointer transition flex flex-col items-center justify-center">
+                <input type="radio" name="sugar_meal_type" value="FASTING" checked class="text-[#F28B82] focus:ring-[#F28B82]">
+                <span class="text-xs font-black text-[#30343B] mt-1">Fasting</span>
+                <span class="text-[10px] text-[#777D87]">வெறும் வயிறு</span>
+              </label>
+
+              <label class="p-3 rounded-2xl border border-[#EAECEF] bg-white text-center cursor-pointer hover:bg-[#FFF4F3] transition flex flex-col items-center justify-center">
+                <input type="radio" name="sugar_meal_type" value="POST_MEAL" class="text-[#F28B82] focus:ring-[#F28B82]">
+                <span class="text-xs font-black text-[#30343B] mt-1">Post-Meal</span>
+                <span class="text-[10px] text-[#777D87]">சாப்பிட்ட பின்</span>
+              </label>
+
+              <label class="p-3 rounded-2xl border border-[#EAECEF] bg-white text-center cursor-pointer hover:bg-[#FFF4F3] transition flex flex-col items-center justify-center">
+                <input type="radio" name="sugar_meal_type" value="RANDOM" class="text-[#F28B82] focus:ring-[#F28B82]">
+                <span class="text-xs font-black text-[#30343B] mt-1">Random</span>
+                <span class="text-[10px] text-[#777D87]">பொது நேரம்</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Sugar Quick Presets -->
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <span class="text-xs font-bold text-[#777D87]">Quick Presets:</span>
+          <button type="button" onclick="setSugarValues(95, 'FASTING', 'Early morning fasting before Metformin')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            95 mg/dL (Normal Fasting)
+          </button>
+          <button type="button" onclick="setSugarValues(138, 'POST_MEAL', '2 hours after lunch')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            138 mg/dL (Normal Post-Meal)
+          </button>
+          <button type="button" onclick="setSugarValues(175, 'POST_MEAL', 'After rice lunch / High reading')" 
+                  class="bg-slate-100 hover:bg-[#FFF4F3] hover:text-[#E07067] px-3 py-1 rounded-xl text-xs font-bold transition">
+            175 mg/dL (Elevated Post-Meal)
+          </button>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Clinical Context / Medication Notes</label>
+          <input type="text" name="notes" id="sugar-notes" placeholder="e.g. Tested using Accu-Chek glucometer before taking morning Metformin 500mg"
+                 class="w-full bg-white border border-[#EAECEF] rounded-xl px-4 py-2.5 text-xs font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none">
+        </div>
+
+        <button type="submit" class="bg-[#65B9A9] hover:bg-[#4FA393] text-white font-black text-sm px-7 py-3 rounded-2xl shadow-sm active:scale-95 transition flex items-center gap-2">
+          <i class="fa-solid fa-droplet"></i>
+          <span>Save Blood Glucose Reading</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Safety Protection Banner -->
+    <div class="p-4 bg-[#EBF6F4] border border-[#65B9A9]/40 rounded-2xl flex items-start gap-3 text-xs">
+      <div class="w-8 h-8 rounded-xl bg-[#65B9A9] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+        <i class="fa-solid fa-shield-heart"></i>
+      </div>
+      <div>
+        <strong class="text-[#3D8577] font-black block">Caregiver Emergency Escalation Protection:</strong>
+        <p class="text-[#30343B] font-medium leading-relaxed mt-0.5">
+          When a reading meets the configured alert threshold, an in-app caregiver alert is recorded. This tool does not send SMS or provide emergency/medical advice; contact your clinician or local emergency services when needed.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VISUAL TREND CHARTS ==================== -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    
+    <!-- BP Trend Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm sm:text-base text-[#30343B]">Blood Pressure Timeline</h3>
+            <p class="text-[11px] text-[#777D87] font-semibold">Systolic / Diastolic Trend (Target: &lt;130/85)</p>
+          </div>
+        </div>
+        <span class="text-[11px] font-bold bg-[#FFF4F3] text-[#E07067] px-2.5 py-1 rounded-full border border-[#FCDAD7]">
+          Recent Records
+        </span>
+      </div>
+
+      <!-- Simple Responsive SVG Visual Graph for BP -->
+      <div class="space-y-3 pt-2">
+        {% for bp in bp_records[:6] %}
+        <div class="flex items-center justify-between text-xs p-3 rounded-2xl border border-[#EAECEF] hover:bg-[#FFF4F3]/30 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full 
+              {% if bp.status == 'NORMAL' %}bg-[#65B9A9]
+              {% elif bp.status == 'ELEVATED' %}bg-amber-400
+              {% else %}bg-rose-500{% endif %}"></div>
+            <div>
+              <div class="font-black text-sm text-[#30343B]">{{ bp.systolic }} / {{ bp.diastolic }} <span class="text-[10px] text-[#777D87]">mmHg</span></div>
+              <div class="text-[11px] text-[#777D87]">{{ bp.recorded_at }}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold
+              {% if bp.status == 'NORMAL' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30
+              {% elif bp.status == 'ELEVATED' %}bg-amber-50 text-amber-800 border border-amber-200
+              {% else %}bg-rose-50 text-rose-800 border border-rose-200{% endif %}">
+              {{ bp.status }}
+            </span>
+            <div class="text-[10px] text-[#777D87] mt-0.5">Pulse: {{ bp.pulse_bpm or 72 }} bpm</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-xs text-[#777D87]">No recent BP records found.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sugar Trend Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm shadow-sm">
+            <i class="fa-solid fa-droplet"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-sm sm:text-base text-[#30343B]">Blood Glucose Timeline</h3>
+            <p class="text-[11px] text-[#777D87] font-semibold">Fasting & Post-Meal Glucose (Target: 70-120)</p>
+          </div>
+        </div>
+        <span class="text-[11px] font-bold bg-[#EBF6F4] text-[#3D8577] px-2.5 py-1 rounded-full border border-[#65B9A9]/30">
+          Glucose Curve
+        </span>
+      </div>
+
+      <!-- Simple Responsive SVG Visual Graph for Sugar -->
+      <div class="space-y-3 pt-2">
+        {% for s in sugar_records[:6] %}
+        <div class="flex items-center justify-between text-xs p-3 rounded-2xl border border-[#EAECEF] hover:bg-[#FFF4F3]/30 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full 
+              {% if s.status == 'NORMAL' %}bg-[#65B9A9]
+              {% elif s.status == 'ELEVATED' %}bg-amber-400
+              {% else %}bg-rose-500{% endif %}"></div>
+            <div>
+              <div class="font-black text-sm text-[#30343B]">{{ s.sugar_value|round(0)|int }} <span class="text-[10px] text-[#777D87]">mg/dL</span></div>
+              <div class="text-[11px] text-[#777D87]">{{ s.recorded_at }}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold
+              {% if s.status == 'NORMAL' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30
+              {% elif s.status == 'ELEVATED' %}bg-amber-50 text-amber-800 border border-amber-200
+              {% else %}bg-rose-50 text-rose-800 border border-rose-200{% endif %}">
+              {{ s.sugar_meal_type }} ({{ s.status }})
+            </span>
+            <div class="text-[10px] text-[#777D87] mt-0.5">{{ s.notes or 'Routine Check' }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-xs text-[#777D87]">No recent sugar records found.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== FULL AUDIT LOGS TABLE ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-list-check text-[#F28B82]"></i>
+        <h3 class="text-base sm:text-lg font-black text-[#30343B]">Complete Vitals History & Clinical Audit Trail</h3>
+      </div>
+      <span class="text-xs font-bold text-[#777D87]">{{ all_vitals|length }} Measurements Recorded</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs sm:text-sm">
+        <thead>
+          <tr class="text-[11px] font-black uppercase text-[#777D87] border-b border-[#EAECEF]">
+            <th class="py-3">Timestamp</th>
+            <th class="py-3">Type</th>
+            <th class="py-3">Reading & Pulse</th>
+            <th class="py-3">Condition / Status</th>
+            <th class="py-3">Medication Context & Notes</th>
+            <th class="py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#EAECEF]">
+          {% for v in all_vitals %}
+          <tr class="hover:bg-[#FFF4F3]/40 transition">
+            <td class="py-3 font-semibold text-[#777D87] whitespace-nowrap">{{ v.recorded_at }}</td>
+            <td class="py-3 font-black text-[#30343B]">
+              {% if v.vital_type == 'BP' %}
+              <span class="inline-flex items-center gap-1 text-rose-600">
+                <i class="fa-solid fa-heart-pulse"></i> Blood Pressure
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 text-amber-600">
+                <i class="fa-solid fa-droplet"></i> Blood Glucose
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-3 font-extrabold text-[#30343B]">
+              {% if v.vital_type == 'BP' %}
+                {{ v.systolic }} / {{ v.diastolic }} mmHg
+                {% if v.pulse_bpm %}<span class="text-xs font-semibold text-[#777D87] ml-1">({{ v.pulse_bpm }} bpm)</span>{% endif %}
+              {% else %}
+                {{ v.sugar_value|round(0)|int }} mg/dL
+                <span class="text-xs font-semibold text-[#777D87] ml-1">[{{ v.sugar_meal_type or 'FASTING' }}]</span>
+              {% endif %}
+            </td>
+            <td class="py-3">
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase
+                {% if v.status == 'NORMAL' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30
+                {% elif v.status == 'ELEVATED' %}bg-amber-50 text-amber-800 border border-amber-300
+                {% elif v.status == 'LOW' %}bg-blue-50 text-blue-800 border border-blue-200
+                {% else %}bg-rose-100 text-rose-900 border border-rose-300 animate-pulse{% endif %}">
+                {{ v.status }}
+              </span>
+            </td>
+            <td class="py-3 text-[#777D87] font-medium max-w-xs truncate">{{ v.notes or 'Routine measurement' }}</td>
+            <td class="py-3 text-right">
+              <form method="POST" action="{{ url_for('delete_vital', vital_id=v.id) }}" onsubmit="return confirm('Remove this reading from history?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="text-slate-400 hover:text-rose-600 transition p-1" title="Delete entry">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="py-6 text-center text-xs text-[#777D87]">No vital measurements recorded yet. Log your first reading above!</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function switchVitalTab(tab) {
+    const tabBp = document.getElementById('vital-tab-bp');
+    const tabSugar = document.getElementById('vital-tab-sugar');
+    const btnBp = document.getElementById('tab-btn-bp');
+    const btnSugar = document.getElementById('tab-btn-sugar');
+
+    if (tab === 'bp') {
+      tabBp.classList.remove('hidden');
+      tabSugar.classList.add('hidden');
+      btnBp.className = "px-5 py-2 rounded-xl transition bg-white text-[#E07067] shadow-sm font-black flex items-center gap-1.5";
+      btnSugar.className = "px-5 py-2 rounded-xl transition text-[#777D87] hover:text-[#30343B] font-bold flex items-center gap-1.5";
+    } else {
+      tabBp.classList.add('hidden');
+      tabSugar.classList.remove('hidden');
+      btnSugar.className = "px-5 py-2 rounded-xl transition bg-white text-[#128C7E] shadow-sm font-black flex items-center gap-1.5";
+      btnBp.className = "px-5 py-2 rounded-xl transition text-[#777D87] hover:text-[#30343B] font-bold flex items-center gap-1.5";
+    }
+  }
+
+  function setBpValues(sys, dia, pulse, notes) {
+    document.getElementById('bp-systolic').value = sys;
+    document.getElementById('bp-diastolic').value = dia;
+    document.getElementById('bp-pulse').value = pulse;
+    document.getElementById('bp-notes').value = notes;
+  }
+
+  function setSugarValues(val, meal, notes) {
+    document.getElementById('sugar-value').value = val;
+    document.getElementById('sugar-notes').value = notes;
+    const radios = document.getElementsByName('sugar_meal_type');
+    for (let r of radios) {
+      if (r.value === meal) r.checked = true;
+    }
+  }
+</script>
+{% endblock %}

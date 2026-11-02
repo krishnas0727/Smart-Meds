@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Pharmacy-Assisted Telephone Order — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- ==================== BREADCRUMB ==================== -->
+  <div class="flex items-center justify-between">
+    <a href="{{ url_for('pharmacy') }}" class="inline-flex items-center gap-2 text-xs font-bold text-[#30343B] hover:text-[#E07067] bg-white px-3.5 py-2 rounded-2xl border border-[#EAECEF] transition shadow-card">
+      <i class="fa-solid fa-arrow-left text-[#F28B82]"></i>
+      <span>Back to Pharmacy Dashboard</span>
+    </a>
+    <span class="text-xs font-bold bg-[#FFF4F3] text-[#E07067] border border-[#FCDAD7] px-3.5 py-1.5 rounded-full">
+      <i class="fa-solid fa-phone mr-1 text-[#F28B82]"></i> Non-Smartphone Offline Elder Intake
+    </span>
+  </div>
+
+  <!-- ==================== HERO BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 space-y-2">
+      <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3 py-1 rounded-full text-xs font-bold text-[#E07067]">
+        <i class="fa-solid fa-headset text-[#F28B82]"></i>
+        <span>Pharmacist Assisted Ordering System</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-black text-[#30343B] tracking-tight font-display">
+        Phone Call & Landline Refill Order Entry
+      </h1>
+      <p class="text-[#777D87] text-xs sm:text-sm font-medium leading-relaxed max-w-2xl">
+        Patients may call their own dispensing pharmacy from any phone and ask staff to record an order. This app does not provide a pharmacy hotline or guarantee fulfillment; the pharmacy must verify the patient, prescription, availability, and delivery details.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== ORDER ENTRY FORM ==================== -->
+  <form method="POST" action="{{ url_for('pharmacy_assisted_order') }}" class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-6" id="assistedOrderForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    
+    <!-- STEP 1: SELECT OR QUICK REGISTER PATIENT -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <label class="text-xs sm:text-sm font-black uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">1</span>
+          <span>Caller Identification & Patient Consent</span>
+        </label>
+        
+        <!-- Mode Switcher: Existing vs New Caller -->
+        <div class="inline-flex rounded-2xl bg-[#FFF4F3] p-1 border border-[#EAECEF] text-xs font-bold">
+          <label class="cursor-pointer px-3 py-1.5 rounded-xl transition" id="lbl_existing" style="background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+            <input type="radio" name="patient_mode" value="existing" checked class="hidden" onchange="togglePatientMode('existing')">
+            <span class="text-[#30343B]">Existing Patient</span>
+          </label>
+          <label class="cursor-pointer px-3 py-1.5 rounded-xl transition" id="lbl_new">
+            <input type="radio" name="patient_mode" value="new" class="hidden" onchange="togglePatientMode('new')">
+            <span class="text-[#777D87]">+ Quick Register Caller</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- EXISTING PATIENT SELECTOR -->
+      <div id="existing_patient_box" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-[#777D87] mb-1">Select Registered Senior Citizen *</label>
+          <select id="patient_select" name="patient_id" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-[#30343B] focus:outline-none focus:border-[#F28B82] transition" onchange="onPatientSelected()">
+            <option value="">-- Choose Senior Citizen Caller --</option>
+            {% for p in patients %}
+            <option value="{{ p.id }}" 
+                    data-name="{{ p.name }}" 
+                    data-phone="{{ p.phone }}" 
+                    data-address="{{ p.address }}" 
+                    data-caregiver="{{ p.caregiver_name }} ({{ p.caregiver_phone }})"
+                    {% if selected_patient_id and selected_patient_id == p.id %}selected{% endif %}>
+              {{ p.name }} (Age {{ p.age }}) — Ph: {{ p.phone }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Auto-filled Patient Preview -->
+        <div id="patient_preview" class="p-3.5 bg-[#FFF4F3] rounded-2xl border border-[#EAECEF] text-xs space-y-1">
+          <div class="font-bold text-[#30343B] flex items-center gap-1.5">
+            <i class="fa-solid fa-user-check text-[#65B9A9]"></i>
+            <span id="prev_name">Select a patient above</span>
+          </div>
+          <div class="text-[#777D87]">
+            Phone: <strong id="prev_phone" class="text-[#30343B]">-</strong> | 
+            Caregiver: <span id="prev_caregiver" class="text-[#30343B]">-</span>
+          </div>
+          <div class="text-[#777D87] text-[11px] truncate" id="prev_address">Address will autofill here</div>
+        </div>
+      </div>
+
+      <!-- NEW CALLER QUICK REGISTRATION BOX -->
+      <div id="new_patient_box" class="hidden space-y-3 bg-[#FFF4F3] p-4 sm:p-5 rounded-2xl border border-[#FCDAD7]">
+        <div class="text-xs font-bold text-[#E07067] uppercase tracking-wide">
+          <i class="fa-solid fa-user-plus mr-1"></i> Quick Senior Intake (Zero Smartphone Required)
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-[#30343B] mb-1">Patient Full Name *</label>
+            <input type="text" name="new_name" id="new_name" placeholder="e.g. S. Ramanathan" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-[#30343B] mb-1">Landline / Keypad Phone *</label>
+            <input type="text" name="new_phone" id="new_phone" placeholder="e.g. 0452-2345678 or 9441234567" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-[#30343B] mb-1">Age *</label>
+            <input type="number" name="new_age" id="new_age" value="74" min="50" max="110" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-[#30343B] mb-1">Residence Delivery Address *</label>
+            <input type="text" name="new_address" id="new_address" placeholder="Full address with landmark" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-[#30343B] mb-1">Caregiver Name</label>
+              <input type="text" name="new_caregiver_name" placeholder="Son / Daughter" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-[#30343B] mb-1">Caregiver Phone</label>
+              <input type="text" name="new_caregiver_phone" placeholder="10-digit mobile number" class="w-full bg-white border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-semibold text-[#30343B]">
+            </div>
+          </div>
+        </div>
+        <div class="pt-1 flex items-center gap-2">
+          <input type="checkbox" name="consent_confirmed" id="consent_confirmed" checked class="w-4 h-4 text-[#F28B82] rounded">
+          <label for="consent_confirmed" class="text-xs font-bold text-[#30343B]">
+            Senior Express Verbal Consent Recorded over Telephone
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: SELECT MEDICINE & QUANTITY -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <label class="text-xs sm:text-sm font-black uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">2</span>
+        <span>Dispensing Medication & Warehouse Stock Check</span>
+      </label>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Medicine Picker -->
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-bold text-[#777D87] mb-1">Catalog Medicine to Dispense *</label>
+          <select id="medicine_select" name="medicine_id" required class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-[#30343B] focus:outline-none focus:border-[#F28B82] transition" onchange="onMedicineSelected()">
+            <option value="">-- Choose Medicine to Dispense --</option>
+            {% for med in catalog_medicines %}
+            <option value="{{ med.id }}" 
+                    data-name="{{ med.name }}" 
+                    data-price="{{ med.price or 110.0 }}" 
+                    data-stock="{{ med.pharmacy_stock or 0 }}" 
+                    data-rx="{{ 1 if med.requires_prescription else 0 }}"
+                    data-category="{{ med.category }}">
+              {{ med.name }} [Warehouse Stock: {{ med.pharmacy_stock }} tabs] — ₹{{ med.price|round(0)|int }}/strip {% if med.requires_prescription %}(Rx Required){% else %}(OTC){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Quantity Picker -->
+        <div>
+          <label class="block text-xs font-bold text-[#777D87] mb-1">Quantity (Tablets) *</label>
+          <select id="quantity_select" name="quantity" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-[#30343B] focus:outline-none focus:border-[#F28B82] transition" onchange="calculateTotal()">
+            <option value="30" selected>30 Tablets (1 Month)</option>
+            <option value="60">60 Tablets (2 Months)</option>
+            <option value="90">90 Tablets (3 Months)</option>
+            <option value="15">15 Tablets (Emergency Strip)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Live Stock & Price Calculation Box -->
+      <div id="medicine_info_box" class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#EAECEF] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div>
+          <span class="text-[#777D87] font-semibold uppercase text-[10px] block">Warehouse Stock</span>
+          <span id="calc_stock" class="text-sm sm:text-base font-black text-[#30343B]">-</span>
+        </div>
+        <div>
+          <span class="text-[#777D87] font-semibold uppercase text-[10px] block">Unit Price / Strip</span>
+          <span id="calc_unit_price" class="text-sm sm:text-base font-black text-[#30343B]">-</span>
+        </div>
+        <div>
+          <span class="text-[#777D87] font-semibold uppercase text-[10px] block">Prescription Status</span>
+          <span id="calc_rx_status" class="text-[11px] font-bold inline-block mt-0.5 px-2 py-0.5 rounded bg-white text-[#777D87] border border-[#EAECEF]">None</span>
+        </div>
+        <div>
+          <span class="text-[#777D87] font-semibold uppercase text-[10px] block">Total Payable</span>
+          <span id="calc_total" class="text-base sm:text-lg font-black text-[#65B9A9]">₹0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: PRESCRIPTION VERIFICATION & DELIVERY DETAILS -->
+    <div class="space-y-4 pb-6 border-b border-[#EAECEF]">
+      <label class="text-xs sm:text-sm font-black uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">3</span>
+        <span>Prescription Verification & Doorstep Address</span>
+      </label>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Rx Checkbox -->
+        <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#EAECEF] flex items-start gap-3">
+          <input type="checkbox" id="rx_verified" name="rx_verified" value="1" checked class="w-5 h-5 mt-0.5 text-[#F28B82] rounded">
+          <div>
+            <label for="rx_verified" class="text-xs font-bold text-[#30343B] block cursor-pointer">
+              Prescription Verified on Record / Physician Authorized
+            </label>
+            <p class="text-[11px] text-[#777D87] font-medium mt-0.5">
+              Confirms chemist has validated prescription on file or authorized direct verbal order.
+            </p>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div>
+          <label class="block text-xs font-bold text-[#777D87] mb-1">Doorstep Payment Mode</label>
+          <select name="payment_method" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-3 text-xs font-bold text-[#30343B] focus:outline-none focus:border-[#F28B82]">
+            <option value="Cash on Delivery (Doorstep)" selected>Cash on Delivery (Doorstep) — Recommended</option>
+            <option value="UPI / QR Code on Delivery">UPI / QR Code on Delivery</option>
+            <option value="Family Account Post-Billing">Family Account Post-Billing</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Delivery Address -->
+      <div>
+        <label class="block text-xs font-bold text-[#777D87] mb-1">Senior's Doorstep Delivery Address *</label>
+        <textarea id="delivery_address" name="delivery_address" rows="2" required placeholder="Full residence address with landmark (e.g. 14 Gandhi Street, Ground Floor)" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl p-3 text-xs font-semibold text-[#30343B] focus:outline-none focus:border-[#F28B82] transition"></textarea>
+      </div>
+
+      <!-- Notes from Phone Call -->
+      <div>
+        <label class="block text-xs font-bold text-[#777D87] mb-1">Pharmacist Call Notes / Delivery Instructions</label>
+        <input type="text" name="call_notes" placeholder="e.g. Ring bell twice, deliver before 1 PM, speak in Tamil" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-2xl px-4 py-2.5 text-xs font-medium text-[#30343B] focus:outline-none focus:border-[#F28B82]">
+      </div>
+    </div>
+
+    <!-- STEP 4: AUTOMATED NOTIFICATION -->
+    <div class="p-4 rounded-2xl bg-[#EBF6F4] border border-[#65B9A9]/30 flex items-start gap-3">
+      <input type="checkbox" id="send_sms_alert" name="send_sms_alert" value="1" checked class="w-5 h-5 mt-0.5 text-[#65B9A9] rounded">
+      <div>
+        <label for="send_sms_alert" class="text-xs font-bold text-[#3D8577] block">
+          Dispatch Automated Notification to Senior & Family Caregiver
+        </label>
+        <p class="text-[11px] text-[#3D8577]/80 font-medium mt-0.5">
+          Logs instant order confirmation with reference code and arrival timeframe.
+        </p>
+      </div>
+    </div>
+
+    <!-- SUBMIT ACTIONS -->
+    <div class="flex items-center justify-between pt-2">
+      <a href="{{ url_for('pharmacy') }}" class="text-xs font-bold text-[#777D87] hover:text-[#30343B]">
+        Cancel
+      </a>
+      <button type="submit" id="submitBtn" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-sm px-7 py-3.5 rounded-2xl shadow-pastel active:scale-95 transition flex items-center gap-2">
+        <i class="fa-solid fa-truck-medical"></i>
+        <span>Place Authorized Order & Reserve Stock</span>
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function togglePatientMode(mode) {
+    const existBox = document.getElementById('existing_patient_box');
+    const newBox = document.getElementById('new_patient_box');
+    const lblExist = document.getElementById('lbl_existing');
+    const lblNew = document.getElementById('lbl_new');
+    const patSelect = document.getElementById('patient_select');
+
+    if (mode === 'new') {
+      existBox.classList.add('hidden');
+      newBox.classList.remove('hidden');
+      lblNew.style.backgroundColor = 'white';
+      lblNew.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+      lblNew.querySelector('span').className = 'text-[#30343B]';
+      lblExist.style.backgroundColor = 'transparent';
+      lblExist.style.boxShadow = 'none';
+      lblExist.querySelector('span').className = 'text-[#777D87]';
+      patSelect.removeAttribute('required');
+      document.getElementById('new_name').setAttribute('required', 'required');
+      document.getElementById('new_phone').setAttribute('required', 'required');
+      document.getElementById('new_address').setAttribute('required', 'required');
+    } else {
+      newBox.classList.add('hidden');
+      existBox.classList.remove('hidden');
+      lblExist.style.backgroundColor = 'white';
+      lblExist.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+      lblExist.querySelector('span').className = 'text-[#30343B]';
+      lblNew.style.backgroundColor = 'transparent';
+      lblNew.style.boxShadow = 'none';
+      lblNew.querySelector('span').className = 'text-[#777D87]';
+      patSelect.setAttribute('required', 'required');
+      document.getElementById('new_name').removeAttribute('required');
+      document.getElementById('new_phone').removeAttribute('required');
+      document.getElementById('new_address').removeAttribute('required');
+    }
+  }
+
+  function onPatientSelected() {
+    const sel = document.getElementById('patient_select');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) {
+      document.getElementById('prev_name').innerText = "Select a patient above";
+      document.getElementById('prev_phone').innerText = "-";
+      document.getElementById('prev_caregiver').innerText = "-";
+      document.getElementById('prev_address').innerText = "Address will autofill here";
+      return;
+    }
+
+    document.getElementById('prev_name').innerText = opt.getAttribute('data-name');
+    document.getElementById('prev_phone').innerText = opt.getAttribute('data-phone');
+    document.getElementById('prev_caregiver').innerText = opt.getAttribute('data-caregiver');
+    document.getElementById('prev_address').innerText = opt.getAttribute('data-address');
+    document.getElementById('delivery_address').value = opt.getAttribute('data-address');
+  }
+
+  function onMedicineSelected() {
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    const medSel = document.getElementById('medicine_select');
+    const opt = medSel.options[medSel.selectedIndex];
+    if (!opt || !opt.value) {
+      document.getElementById('calc_stock').innerText = "-";
+      document.getElementById('calc_unit_price').innerText = "-";
+      document.getElementById('calc_rx_status').innerText = "None";
+      document.getElementById('calc_total').innerText = "₹0";
+      return;
+    }
+
+    const price = parseFloat(opt.getAttribute('data-price')) || 110.0;
+    const stock = parseInt(opt.getAttribute('data-stock')) || 0;
+    const isRx = opt.getAttribute('data-rx') === "1";
+
+    const qtySel = document.getElementById('quantity_select');
+    const qty = parseInt(qtySel.value) || 30;
+
+    const strips = qty / 30;
+    const total = Math.round(price * strips);
+
+    document.getElementById('calc_stock').innerText = stock + " tabs";
+    if (stock < qty) {
+      document.getElementById('calc_stock').innerHTML = `<span class="text-rose-600 font-extrabold">${stock} tabs (INSUFFICIENT)</span>`;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    document.getElementById('calc_unit_price').innerText = "₹" + Math.round(price) + " / strip (30 tabs)";
+
+    if (isRx) {
+      document.getElementById('calc_rx_status').className = "text-[11px] font-bold inline-block mt-0.5 px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200";
+      document.getElementById('calc_rx_status').innerText = "Rx Required";
+    } else {
+      document.getElementById('calc_rx_status').className = "text-[11px] font-bold inline-block mt-0.5 px-2 py-0.5 rounded bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30";
+      document.getElementById('calc_rx_status').innerText = "OTC Supplement";
+    }
+
+    document.getElementById('calc_total').innerText = "₹" + total;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    onPatientSelected();
+    calculateTotal();
+  });
+</script>
+{% endblock %}

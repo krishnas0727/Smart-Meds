@@ -1,0 +1,105 @@
+/* ElderCare MedTrack - Modern Healthcare UI Styling */
+/* Palette: Primary Pastel Pink (#F28B82), Light Pink Bg (#FFF4F3), White Cards (#FFFFFF), Dark Text (#30343B), Muted Text (#777D87), Soft Teal (#65B9A9), Light Grey Borders (#EAECEF) */
+
+:root {
+  --color-primary: #F28B82;
+  --color-primary-hover: #E07067;
+  --color-primary-light: #FFF4F3;
+  --color-primary-tint: #FDECEB;
+  --color-text-dark: #30343B;
+  --color-text-muted: #777D87;
+  --color-status-teal: #65B9A9;
+  --color-status-teal-bg: #EBF6F4;
+  --color-border: #EAECEF;
+}
+
+/* Senior-Friendly Accessibility & Legibility Styles */
+html.font-size-normal {
+  font-size: 16px;
+}
+
+html.font-size-large {
+  font-size: 18px;
+}
+
+html.font-size-xlarge {
+  font-size: 20px;
+}
+
+/* Smooth Scrolling & Typography */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #30343B;
+  background-color: #FFF4F3;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure minimum touch targets for elderly fingers */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Smooth modal scaling animation */
+@keyframes scaleUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Focus styles for keyboard navigation and screen readers */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #F28B82;
+  outline-offset: 2px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF4F3;
+}
+::-webkit-scrollbar-thumb {
+  background: #FCDAD7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F28B82;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 12pt;
+  }
+  .no-print, header, aside, nav, #sidebar, #mobile-menu, #voice-toast, footer, button, .print-hide {
+    display: none !important;
+  }
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-card-content {
+    box-shadow: none !important;
+    border: 2px solid #30343B !important;
+    page-break-inside: avoid;
+  }
+}

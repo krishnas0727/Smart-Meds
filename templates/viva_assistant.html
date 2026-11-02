@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}AI Viva Voce Assistant — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- ==================== HERO BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 space-y-2">
+      <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067]">
+        <i class="fa-solid fa-graduation-cap text-[#F28B82]"></i>
+        <span>External Examiner Viva Voce & Technical Defense Engine</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+        Project Viva Voce AI Assistant
+      </h1>
+      <p class="text-[#777D87] text-xs sm:text-sm font-medium leading-relaxed max-w-3xl">
+        Grounded Q&A assistant verified against actual Flask route implementations, SQLite relational schemas, concurrency locking algorithms, and real-world geriatric constraints.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== QUESTION INPUT BOX ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-4">
+    <label class="block text-xs sm:text-sm font-black uppercase tracking-wider text-[#30343B] flex items-center justify-between">
+      <span class="flex items-center gap-2">
+        <i class="fa-solid fa-circle-question text-[#F28B82]"></i>
+        <span>Ask Any Question to the Viva Assistant</span>
+      </span>
+      <span class="text-xs font-medium text-[#777D87] hidden sm:inline">Typed Text or Microphone Voice Input</span>
+    </label>
+
+    <div class="relative">
+      <textarea id="questionInput" rows="2" placeholder="e.g. How does the system work for elderly people who do not have a smartphone? Or: Explain the stock reservation algorithm..." 
+        class="w-full bg-[#FFF4F3] border border-[#EAECEF] focus:border-[#F28B82] focus:bg-white rounded-2xl p-4 pr-24 text-xs sm:text-sm font-semibold text-[#30343B] placeholder-[#777D87] focus:outline-none transition resize-none"></textarea>
+      
+      <!-- Microphone & Submit Buttons -->
+      <div class="absolute right-3 bottom-3 flex items-center gap-2">
+        <button type="button" id="micBtn" onclick="toggleSpeechRecognition()" title="Voice Input (Microphone)" class="w-9 h-9 rounded-xl bg-white border border-[#EAECEF] hover:bg-[#FFF4F3] text-[#777D87] hover:text-[#30343B] flex items-center justify-center transition active:scale-95 shadow-sm">
+          <i class="fa-solid fa-microphone text-sm" id="micIcon"></i>
+        </button>
+        <button type="button" onclick="submitVivaQuestion()" id="askBtn" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-pastel transition flex items-center gap-1.5 active:scale-95">
+          <i class="fa-solid fa-paper-plane text-xs"></i>
+          <span>Ask</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- QUICK PRESET EXAMINER QUESTIONS -->
+    <div class="pt-3 border-t border-[#EAECEF] space-y-2">
+      <div class="text-[11px] font-black uppercase tracking-wider text-[#777D87]">
+        Popular External Examiner Questions (Click to Answer Instantly):
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="askPreset('What is the main objective and problem statement of this project?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          🎯 Project Objective
+        </button>
+        <button onclick="askPreset('How does your system work for elderly people who do not have a smartphone?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] px-3 py-1.5 rounded-xl border border-[#FCDAD7] transition">
+          📱 Non-Smartphone Solution (Core)
+        </button>
+        <button onclick="askPreset('Explain the refill prediction algorithm and how stock decreases.')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          ⚡ Refill Prediction & Burn Rate
+        </button>
+        <button onclick="askPreset('How does stock reservation prevent overselling, and what happens when an order is cancelled?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          📦 Stock Reservation & Cancellation
+        </button>
+        <button onclick="askPreset('How does prescription validation work for Schedule-H vs OTC medicines?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          💊 Prescription Validation (Rx vs OTC)
+        </button>
+        <button onclick="askPreset('What are the limitations of your project? Can the app confirm if a patient swallowed a pill?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-rose-50 text-rose-700 px-3 py-1.5 rounded-xl border border-rose-200 transition">
+          ⚠️ Scientific Truth & Limitations
+        </button>
+        <button onclick="askPreset('Explain the database architecture, schema normalization, and table relationships.')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          🗄️ Database Architecture (8 Tables)
+        </button>
+        <button onclick="askPreset('How is security, session management, and SQL injection prevention handled?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          🔒 Security & SQL Injection Prevention
+        </button>
+        <button onclick="askPreset('How does your system differ from commercial apps like 1mg or PharmEasy?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          ⚖️ Commercial Benchmark
+        </button>
+        <button onclick="askPreset('What is the future scope and hardware IoT integration plan?')" class="text-xs font-bold bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] hover:text-[#E07067] px-3 py-1.5 rounded-xl border border-[#EAECEF] transition">
+          🚀 Future Scope & IoT Pillbox
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LOADING STATE ==================== -->
+  <div id="vivaLoading" class="hidden bg-white rounded-3xl p-8 text-center shadow-card border border-[#EAECEF] space-y-2">
+    <div class="inline-block animate-spin text-[#F28B82] text-3xl">
+      <i class="fa-solid fa-circle-notch"></i>
+    </div>
+    <div class="text-sm font-bold text-[#30343B]">Consulting grounded project architecture and source code...</div>
+  </div>
+
+  <!-- ==================== ANSWER CONTAINER ==================== -->
+  <div id="vivaResult" class="space-y-4">
+    
+    <!-- Default Placeholder -->
+    <div id="vivaPlaceholder" class="bg-white rounded-3xl p-8 text-center text-[#777D87] font-medium border border-[#EAECEF] shadow-card">
+      <div class="w-14 h-14 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center mx-auto text-2xl mb-3">
+        <i class="fa-solid fa-chalkboard-user"></i>
+      </div>
+      <p class="text-sm text-[#30343B] font-bold">Select any question above or type your inquiry to view the 4-part viva answer.</p>
+      <p class="text-xs text-[#777D87] mt-1">Generates Speakable English, Technical Engineering Details, Tanglish Breakdown, and Code Grounding.</p>
+    </div>
+
+    <!-- Active Answer Card (Populated by JS) -->
+    <div id="answerCard" class="hidden space-y-4">
+
+      <!-- Question Bar -->
+      <div class="bg-white text-[#30343B] p-5 rounded-3xl border border-[#EAECEF] shadow-card flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center font-black text-xs">Q</span>
+          <h3 id="ansQuestion" class="text-sm sm:text-base font-bold text-[#30343B]"></h3>
+        </div>
+        <span id="ansConfidence" class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30">
+          Codebase Grounded
+        </span>
+      </div>
+
+      <!-- 1. SHORT SPEAKABLE ENGLISH -->
+      <div class="bg-white border border-[#EAECEF] rounded-3xl p-6 shadow-card space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-[#F28B82] text-white flex items-center justify-center text-xs">1</span>
+            <span>Short Speakable English Summary (For Examiner)</span>
+          </span>
+          <button onclick="speakSpokenAnswer()" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7] font-bold text-xs px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm">
+            <i class="fa-solid fa-volume-high text-[#F28B82]"></i>
+            <span>Speak Aloud</span>
+          </button>
+        </div>
+        <p id="ansSpoken" class="text-sm sm:text-base font-bold text-[#30343B] leading-relaxed"></p>
+      </div>
+
+      <!-- 2. DETAILED TECHNICAL ARCHITECTURE -->
+      <div class="bg-white border border-[#EAECEF] rounded-3xl p-6 shadow-card space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-[#30343B] text-white flex items-center justify-center text-xs">2</span>
+          <span>In-Depth Technical & Engineering Explanation</span>
+        </span>
+        <p id="ansTechnical" class="text-xs sm:text-sm font-medium text-[#777D87] leading-relaxed whitespace-pre-line"></p>
+      </div>
+
+      <!-- 3. TANGLISH EXPLANATION -->
+      <div class="bg-white border border-[#EAECEF] rounded-3xl p-6 shadow-card space-y-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-[#30343B] flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-[#65B9A9] text-white flex items-center justify-center text-xs">3</span>
+          <span>Easy Tanglish Explanation (Tamil + English Concept)</span>
+        </span>
+        <p id="ansTanglish" class="text-xs sm:text-sm font-semibold text-[#30343B] leading-relaxed"></p>
+      </div>
+
+      <!-- 4. CODE REFERENCE & DATABASE GROUNDING -->
+      <div class="bg-white border border-[#EAECEF] rounded-3xl p-6 shadow-card space-y-2 font-mono text-xs">
+        <div class="flex items-center justify-between text-[11px] font-sans font-bold text-[#777D87] uppercase tracking-wider border-b border-[#EAECEF] pb-2">
+          <span class="flex items-center gap-2">
+            <i class="fa-solid fa-code text-[#F28B82]"></i>
+            <span>Implemented Code & Database Grounding</span>
+          </span>
+          <span class="text-[#65B9A9]">Verified Source</span>
+        </div>
+        <div id="ansCodeRef" class="text-[#30343B] font-bold text-xs pt-1"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let recognition = null;
+  let isRecording = false;
+
+  function initSpeech() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('micBtn').classList.add('bg-rose-500', 'text-white', 'animate-pulse');
+        document.getElementById('micIcon').className = 'fa-solid fa-stop text-sm';
+      };
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('questionInput').value = transcript;
+        submitVivaQuestion();
+      };
+
+      recognition.onerror = function() {
+        stopRecording();
+      };
+
+      recognition.onend = function() {
+        stopRecording();
+      };
+    }
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('bg-rose-500', 'text-white', 'animate-pulse');
+    document.getElementById('micIcon').className = 'fa-solid fa-microphone text-sm';
+  }
+
+  function toggleSpeechRecognition() {
+    if (!recognition) {
+      initSpeech();
+    }
+    if (!recognition) {
+      alert("Speech recognition is not supported in this browser. Please type your question.");
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  }
+
+  function askPreset(questionText) {
+    document.getElementById('questionInput').value = questionText;
+    submitVivaQuestion();
+  }
+
+  function submitVivaQuestion() {
+    const q = document.getElementById('questionInput').value.trim();
+    if (!q) return;
+
+    document.getElementById('vivaPlaceholder').classList.add('hidden');
+    document.getElementById('answerCard').classList.add('hidden');
+    document.getElementById('vivaLoading').classList.remove('hidden');
+
+    fetch("{{ url_for('api_viva_ask') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q })
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('vivaLoading').classList.add('hidden');
+      document.getElementById('answerCard').classList.remove('hidden');
+
+      document.getElementById('ansQuestion').innerText = data.question;
+      document.getElementById('ansConfidence').innerText = data.confidence || 'GROUNDED';
+      document.getElementById('ansSpoken').innerText = data.spoken_answer;
+      document.getElementById('ansTechnical').innerText = data.technical_explanation;
+      document.getElementById('ansTanglish').innerText = data.tanglish_explanation;
+      document.getElementById('ansCodeRef').innerText = data.code_reference;
+    })
+    .catch(err => {
+      document.getElementById('vivaLoading').classList.add('hidden');
+      alert("Error fetching viva answer: " + err);
+    });
+  }
+
+  function speakSpokenAnswer() {
+    const txt = document.getElementById('ansSpoken').innerText;
+    if (!txt || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.rate = 0.95;
+    window.speechSynthesis.speak(u);
+  }
+
+  document.addEventListener('DOMContentLoaded', initSpeech);
+</script>
+{% endblock %}

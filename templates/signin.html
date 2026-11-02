@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" class="senior-mode font-size-normal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Sign In — ElderCare MedTrack</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Inter & Outfit Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #FFF4F3;
+      color: #30343B;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-display {
+      font-family: 'Outfit', 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 selection:bg-[#FCDAD7] selection:text-[#842B25]">
+
+  <!-- TOP BAR WITH BRAND & ACCESSIBILITY CONTROLS -->
+  <header class="w-full max-w-4xl mx-auto flex items-center justify-between py-2 sm:py-4">
+    <!-- Brand Logo -->
+    <a href="{{ url_for('signin') }}" class="flex items-center gap-3 group">
+      <div class="w-11 h-11 rounded-2xl bg-[#F28B82] text-white flex items-center justify-center text-xl shadow-md shadow-[#F28B82]/30 group-hover:bg-[#E07067] transition transform group-hover:scale-105">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+      <div>
+        <div class="text-xl sm:text-2xl font-black text-[#30343B] tracking-tight leading-none font-display">
+          Elder<span class="text-[#F28B82]">Care</span> <span class="text-lg font-semibold text-[#777D87]">MedTrack</span>
+        </div>
+        <p class="text-[10px] sm:text-[11px] font-bold text-[#777D87] uppercase tracking-wider mt-0.5">
+          Senior Medicine & Home Delivery
+        </p>
+      </div>
+    </a>
+
+    <!-- Top Right: Language Toggle & Emergency Info -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Bilingual Toggle Button -->
+      <button id="lang-toggle-btn" onclick="toggleSignInLanguage()" 
+              class="bg-white hover:bg-slate-50 border border-[#EAECEF] text-[#30343B] font-bold text-xs px-3 py-2 rounded-2xl flex items-center gap-1.5 transition shadow-sm cursor-pointer" 
+              title="Switch Language / மொழியை மாற்றுக">
+        <i class="fa-solid fa-language text-sm text-[#F28B82]"></i>
+        <span id="lang-text" class="font-extrabold text-[#E07067]">English / தமிழ்</span>
+      </button>
+
+      <a href="tel:18004259999" class="hidden sm:inline-flex items-center gap-1.5 bg-white border border-[#EAECEF] text-xs font-bold text-[#777D87] hover:text-[#30343B] px-3.5 py-2 rounded-2xl shadow-sm transition">
+        <i class="fa-solid fa-phone text-[#65B9A9]"></i>
+        <span>Support number not configured</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN SIGN IN CONTAINER -->
+  <main class="w-full max-w-lg mx-auto my-4 sm:my-8 space-y-5">
+
+    <!-- PAGE HERO TITLE -->
+    <div class="text-center space-y-1.5">
+      <div class="inline-flex items-center gap-2 bg-[#FDECEB] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067]">
+        <span class="w-2 h-2 rounded-full bg-[#65B9A9] animate-pulse"></span>
+        <span id="txt-secure-badge">Secure Healthcare & Medicine Portal</span>
+      </div>
+      <h2 id="txt-hero-title" class="text-2xl sm:text-3xl font-black text-[#30343B] tracking-tight font-display">
+        Sign In to Your Account
+      </h2>
+      <p id="txt-hero-sub" class="text-xs sm:text-sm font-medium text-[#777D87]">
+        Access daily medicine schedule, doorstep refills, and health vitals.
+      </p>
+    </div>
+
+    <!-- FLASH NOTIFICATIONS -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="space-y-2">
+          {% for category, message in messages %}
+            <div class="p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-3 shadow-sm border
+              {% if category == 'success' %} bg-[#EBF6F4] text-[#3D8577] border-[#65B9A9]/40
+              {% elif category == 'error' %} bg-[#FDECEB] text-[#842B25] border-[#F28B82]/40
+              {% elif category == 'warning' %} bg-amber-50 text-amber-900 border-amber-300
+              {% else %} bg-blue-50 text-blue-900 border-blue-200
+              {% endif %}">
+              <i class="fa-solid 
+                {% if category == 'success' %} fa-circle-check text-[#65B9A9]
+                {% elif category == 'error' %} fa-circle-exclamation text-[#F28B82]
+                {% else %} fa-circle-info text-blue-500
+                {% endif %} text-lg flex-shrink-0"></i>
+              <span class="flex-1">{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    
+
+    <!-- PRIMARY CREDENTIALS SIGN IN FORM -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-5">
+      <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+        <div>
+          <h3 id="txt-form-title" class="text-lg sm:text-xl font-black text-[#30343B]">Sign In with Mobile or Username</h3>
+          <p id="txt-form-sub" class="text-xs font-semibold text-[#777D87] mt-0.5">Enter registered 10-digit mobile number and PIN</p>
+        </div>
+        <div class="w-9 h-9 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center text-sm shadow-sm">
+          <i class="fa-solid fa-right-to-bracket"></i>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('signin') }}" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        
+        <!-- Field 1: Phone or Username -->
+        <div>
+          <label id="lbl-phone" class="block text-xs font-bold text-[#30343B] mb-1.5 flex items-center justify-between">
+            <span>Mobile Phone Number or Username <span class="text-rose-500">*</span></span>
+            <span class="text-[10px] text-[#777D87] font-semibold">10-Digit Mobile</span>
+          </label>
+          <div class="relative">
+            <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[#777D87]">
+              <i class="fa-solid fa-mobile-screen"></i>
+            </div>
+            <input type="text" name="phone" id="signin-phone" required autofocus
+                   placeholder="10-digit mobile number or username" 
+                   class="w-full pl-10 pr-4 py-3 text-sm font-semibold rounded-2xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B] transition">
+          </div>
+        </div>
+
+        <!-- Field 2: Security PIN or Password -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label id="lbl-pin" class="text-xs font-bold text-[#30343B]">
+              Password / PIN <span class="text-rose-500">*</span>
+            </label>
+          </div>
+          <div class="relative">
+            <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-[#777D87]">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <input type="password" name="pin" id="signin-pin" required
+                   placeholder="Enter your password or PIN" 
+                   class="w-full pl-10 pr-11 py-3 text-sm font-semibold rounded-2xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-[#30343B] transition">
+            <button type="button" onclick="togglePinVisibility()" 
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-[#777D87] hover:text-[#30343B] transition p-1"
+                    title="Toggle PIN Visibility">
+              <i class="fa-solid fa-eye" id="pin-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#777D87] hover:text-[#30343B]">
+            <input type="checkbox" name="remember" 
+                   class="w-4 h-4 rounded-lg text-[#F28B82] focus:ring-[#F28B82] border-slate-300">
+            <span id="txt-remember">Remember this senior device</span>
+          </label>
+          <a href="tel:18004259999" class="text-[11px] font-bold text-[#E07067] hover:underline" id="txt-forgot">
+            Forgot PIN?
+          </a>
+        </div>
+
+        <!-- Primary Sign In Submit Button -->
+        <button type="submit" 
+                class="w-full py-3.5 rounded-2xl bg-[#F28B82] hover:bg-[#E07067] text-white font-black text-sm sm:text-base shadow-pastel transition active:scale-95 flex items-center justify-center gap-2 mt-2 cursor-pointer">
+          <i class="fa-solid fa-right-to-bracket text-base"></i>
+          <span id="btn-signin-text">Sign In to Healthcare Portal</span>
+        </button>
+      </form>
+
+      <!-- Bottom Registration Link -->
+      <div class="pt-4 border-t border-[#EAECEF] text-center text-xs text-[#777D87] font-semibold">
+        <span id="txt-no-account">Don't have a senior patient account?</span>
+        <a href="{{ url_for('register') }}" class="text-[#E07067] font-black hover:underline ml-1" id="txt-register-link">
+          Register New Patient &rarr;
+        </a>
+        <div class="mt-2"><a href="{{ url_for('register_caregiver') }}" class="text-[#E07067] font-black hover:underline">Register as a caregiver using a patient invitation</a></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="w-full max-w-4xl mx-auto text-center text-xs text-[#777D87] py-4 space-y-1">
+    <div>
+      ElderCare MedTrack &bull; Senior Citizen Medicine Management &amp; Delivery Companion
+    </div>
+    <div class="text-[11px] text-[#777D87]">
+      Emergency: contact local emergency services. Pharmacy support number: not configured.
+    </div>
+  </footer>
+
+  <script>
+    function togglePinVisibility() {
+      const pinInput = document.getElementById('signin-pin');
+      const eyeIcon = document.getElementById('pin-eye-icon');
+      if (pinInput.type === 'password') {
+        pinInput.type = 'text';
+        eyeIcon.className = 'fa-solid fa-eye-slash text-[#E07067]';
+      } else {
+        pinInput.type = 'password';
+        eyeIcon.className = 'fa-solid fa-eye text-[#777D87]';
+      }
+    }
+
+    // Client-side bilingual translation dictionary for Sign In page
+    let isTamil = localStorage.getItem('lang') === 'ta';
+
+    function updateSignInTranslations() {
+      const secureBadge = document.getElementById('txt-secure-badge');
+      const heroTitle = document.getElementById('txt-hero-title');
+      const heroSub = document.getElementById('txt-hero-sub');
+      const quickTitle = document.getElementById('txt-quick-signin-title');
+      const quickSub = document.getElementById('txt-quick-signin-sub');
+      const formTitle = document.getElementById('txt-form-title');
+      const formSub = document.getElementById('txt-form-sub');
+      const lblPhone = document.getElementById('lbl-phone');
+      const lblPin = document.getElementById('lbl-pin');
+      const btnText = document.getElementById('btn-signin-text');
+      const txtRemember = document.getElementById('txt-remember');
+      const txtForgot = document.getElementById('txt-forgot');
+      const txtNoAccount = document.getElementById('txt-no-account');
+      const txtRegisterLink = document.getElementById('txt-register-link');
+      const langText = document.getElementById('lang-text');
+
+      if (isTamil) {
+        if (secureBadge) secureBadge.innerText = 'பாதுகாப்பான மருத்துவ போர்டல்';
+        if (heroTitle) heroTitle.innerText = 'உங்கள் கணக்கில் சைன் இன் செய்க';
+        if (heroSub) heroSub.innerText = 'தினசரி மருந்து அட்டவணை, டெலிவரி மற்றும் BP/சுகர் பதிவை அணுகவும்.';
+        if (formTitle) formTitle.innerText = 'மொபைல் எண் அல்லது பயனர்பெயர் கொண்டு சைன் இன்';
+        if (formSub) formSub.innerText = 'பதிவு செய்யப்பட்ட 10-இலக்க மொபைல் எண் மற்றும் PIN ஐ உள்ளிடவும்';
+        if (lblPhone) lblPhone.innerHTML = '<span>மொபைல் எண் அல்லது பயனர்பெயர் <span class="text-rose-500">*</span></span><span class="text-[10px] text-[#777D87]">10 இலக்கம்</span>';
+        if (lblPin) lblPin.innerHTML = 'பாதுகாப்பு PIN / கடவுச்சொல் <span class="text-rose-500">*</span>';
+        if (btnText) btnText.innerText = 'போர்ட்டலில் சைன் இன் செய்க';
+        if (txtRemember) txtRemember.innerText = 'இந்த சாதனத்தை நினைவில் கொள்க';
+        if (txtForgot) txtForgot.innerText = 'PIN மறந்துவிட்டதா?';
+        if (txtNoAccount) txtNoAccount.innerText = 'கணக்கு இல்லையா?';
+        if (txtRegisterLink) txtRegisterLink.innerHTML = 'புதிய நோயாளியைப் பதிவு செய்க &rarr;';
+        if (langText) langText.innerText = 'தமிழ் (Tamil)';
+      } else {
+        if (secureBadge) secureBadge.innerText = 'Secure Healthcare & Medicine Portal';
+        if (heroTitle) heroTitle.innerText = 'Sign In to Your Account';
+        if (heroSub) heroSub.innerText = 'Access daily medicine schedule, doorstep refills, and health vitals.';
+        if (formTitle) formTitle.innerText = 'Sign In with Mobile or Username';
+        if (formSub) formSub.innerText = 'Enter registered 10-digit mobile number and PIN';
+        if (lblPhone) lblPhone.innerHTML = '<span>Mobile Phone Number or Username <span class="text-rose-500">*</span></span><span class="text-[10px] text-[#777D87]">10-Digit Mobile</span>';
+        if (lblPin) lblPin.innerHTML = 'Password / PIN <span class="text-rose-500">*</span>';
+        if (btnText) btnText.innerText = 'Sign In to Healthcare Portal';
+        if (txtRemember) txtRemember.innerText = 'Remember this senior device';
+        if (txtForgot) txtForgot.innerText = 'Forgot PIN?';
+        if (txtNoAccount) txtNoAccount.innerText = "Don't have a senior patient account?";
+        if (txtRegisterLink) txtRegisterLink.innerHTML = 'Register New Patient &rarr;';
+        if (langText) langText.innerText = 'English / தமிழ்';
+      }
+    }
+
+    function toggleSignInLanguage() {
+      isTamil = !isTamil;
+      localStorage.setItem('lang', isTamil ? 'ta' : 'en');
+      updateSignInTranslations();
+      fetch(`/api/set_language/${isTamil ? 'ta' : 'en'}`, { method: 'POST' }).catch(() => {});
+    }
+
+    document.addEventListener('DOMContentLoaded', updateSignInTranslations);
+  </script>
+<script>
+    (() => {
+      const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+        const url = new URL(typeof input === 'string' ? input : input.url, window.location.href);
+        if (url.origin === window.location.origin && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+          const headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
+          if (!headers.has('X-CSRFToken')) headers.set('X-CSRFToken', token);
+          init = {...init, headers};
+        }
+        return nativeFetch(input, init);
+      };
+    })();
+  </script>
+
+</body>
+</html>

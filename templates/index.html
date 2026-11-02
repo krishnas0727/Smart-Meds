@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+
+{% block title %}Today's Medication Dashboard — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-7">
+
+  <!-- ==================== 1. WELCOME HERO BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <!-- Subtle Pastel Decorative Accent -->
+    <div class="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-[#FDECEB] blur-2xl pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div>
+        <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067] mb-3">
+          <i class="fa-regular fa-calendar-check text-[#F28B82]"></i>
+          <span>{{ today_date }}</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight leading-tight font-display">
+          <span data-i18n="hero_welcome">Welcome back,</span> <span class="text-[#F28B82]">{{ current_patient.name if current_patient else 'Senior Patient' }}</span>!
+        </h1>
+        <p class="text-[#777D87] text-base sm:text-lg font-medium mt-1.5 max-w-2xl leading-relaxed" data-i18n="hero_desc">
+          Here is your daily medication plan. Track your doses, monitor your remaining pills, and order doorstep refills anytime.
+        </p>
+      </div>
+
+      <!-- Quick Audio Readout & Refill Buttons -->
+      <div class="flex flex-wrap sm:flex-nowrap gap-3 flex-shrink-0">
+        <button onclick="speakDailySummary()" title="Listen to your daily medication schedule" class="flex-1 sm:flex-initial bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7] font-bold px-5 py-3.5 rounded-2xl flex items-center justify-center gap-3 transition active:scale-95 shadow-sm text-sm sm:text-base">
+          <i class="fa-solid fa-volume-high text-xl text-[#F28B82]"></i>
+          <div class="text-left">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-[#777D87]" data-i18n="hero_audio_title">Audio Assistant</div>
+            <div class="font-extrabold leading-tight" data-i18n="hero_audio_btn">Listen to Schedule</div>
+          </div>
+        </button>
+
+        <a href="{{ url_for('refill') }}" title="Request a home delivery refill" class="flex-1 sm:flex-initial bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-3 transition active:scale-95 shadow-pastel text-sm sm:text-base">
+          <i class="fa-solid fa-truck-fast text-xl"></i>
+          <div class="text-left">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-rose-100" data-i18n="hero_refill_title">Doorstep Refill</div>
+            <div class="font-extrabold leading-tight" data-i18n="hero_refill_btn">Order Medicines</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. QUICK METRIC STATS CARDS ==================== -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    
+    <!-- Stat 1: Active Prescriptions -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4 transition hover:shadow-card-hover">
+      <div class="w-12 h-12 rounded-2xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-pills"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider" data-i18n="stat_active_prescriptions">Active Prescriptions</div>
+        <div class="text-2xl font-black text-[#30343B] mt-0.5">{{ prescriptions|length }}</div>
+      </div>
+    </div>
+
+    <!-- Stat 2: Doses Taken Today -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4 transition hover:shadow-card-hover">
+      <div class="w-12 h-12 rounded-2xl bg-[#EBF6F4] text-[#65B9A9] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider" data-i18n="stat_taken_today">Taken Today</div>
+        <div class="text-2xl font-black text-[#65B9A9] mt-0.5">{{ logged_prescription_ids|length }} Doses</div>
+      </div>
+    </div>
+
+    <!-- Stat 3: Low Stock Alerts -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4 transition hover:shadow-card-hover">
+      <div class="w-12 h-12 rounded-2xl {% if low_stock_items %}bg-rose-50 text-rose-600 animate-pulse{% else %}bg-slate-50 text-slate-400{% endif %} flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider" data-i18n="stat_low_stock">Low Stock Alerts</div>
+        <div class="text-2xl font-black {% if low_stock_items %}text-rose-600{% else %}text-[#30343B]{% endif %} mt-0.5">
+          {{ low_stock_items|length }} Item(s)
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat 4: Caregiver Linked -->
+    <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-center gap-4 transition hover:shadow-card-hover">
+      <div class="w-12 h-12 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-shield-heart"></i>
+      </div>
+      <div class="truncate">
+        <div class="text-xs font-semibold text-[#777D87] uppercase tracking-wider" data-i18n="stat_caregiver">Caregiver Contact</div>
+        <div class="text-sm font-bold text-[#30343B] mt-0.5 truncate">
+          {{ current_patient.caregiver_phone if current_patient else '98765-43210' }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== 3. CRITICAL LOW STOCK WARNING BANNER ==================== -->
+  {% if low_stock_items %}
+  <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-card border-2 border-rose-300 relative overflow-hidden">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl flex-shrink-0 shadow-sm">
+          <i class="fa-solid fa-bell-exclamation"></i>
+        </div>
+        <div>
+          <span class="inline-block bg-rose-50 text-rose-700 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-rose-200 mb-1" data-i18n="low_stock_banner_badge">
+            Low Home Inventory Alert
+          </span>
+          <h2 class="text-xl sm:text-2xl font-black text-[#30343B] tracking-tight" data-i18n="low_stock_banner_title">
+            Some of your daily tablets are running low!
+          </h2>
+          <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1" data-i18n="low_stock_banner_desc">
+            Order in 1 click and receive medicines safely at your doorstep before they finish:
+          </p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            {% for item in low_stock_items %}
+            <span class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] text-[#30343B] font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              {{ item.medicine_name }}
+              <strong class="text-rose-600 font-extrabold">({{ item.stock_remaining }} tablets left)</strong>
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- 1-Click Order Refill Button -->
+      <a href="{{ url_for('refill') }}" class="w-full md:w-auto bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-base px-6 py-3.5 rounded-2xl shadow-pastel flex items-center justify-center gap-2.5 transition active:scale-95 flex-shrink-0">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span data-i18n="low_stock_order_btn">Order Doorstep Refill (1-Click)</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ==================== 4. ACTIVE LIVE DELIVERY TRACKER ==================== -->
+  {% if active_order %}
+  <div class="bg-white rounded-3xl p-6 shadow-card border border-[#65B9A9]/40">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-[#EBF6F4] text-[#65B9A9] flex items-center justify-center text-xl font-bold flex-shrink-0">
+          <i class="fa-solid fa-truck-fast"></i>
+        </div>
+        <div>
+          <div class="text-xs font-bold uppercase tracking-wider text-[#65B9A9]" data-i18n="active_delivery_badge">Active Doorstep Delivery</div>
+          <h3 class="text-lg font-black text-[#30343B]">Order #{{ active_order.order_number }} — In Progress</h3>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{{ whatsapp_tracking_url(active_order, active_order.contact_phone, patient) }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-bold text-[#128C7E] bg-[#25D366]/15 hover:bg-[#25D366]/25 px-3.5 py-2 rounded-xl transition border border-[#25D366]/30 shadow-sm" title="Track active order on WhatsApp">
+          <i class="fa-brands fa-whatsapp text-sm text-[#25D366]"></i>
+          <span>Track on WhatsApp</span>
+        </a>
+        <a href="{{ url_for('order_detail', order_id=active_order.id) }}" class="inline-flex items-center gap-2 text-sm font-bold text-[#E07067] bg-[#FFF4F3] hover:bg-[#FDECEB] px-4 py-2 rounded-xl transition border border-[#FCDAD7]">
+          <span data-i18n="active_delivery_btn">View Details</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- 4-Stage Status Progress Timeline -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-bold pt-3 border-t border-[#EAECEF]">
+      <div class="p-2.5 rounded-2xl transition {% if active_order.status in ['Confirmed', 'Accepted', 'Packed', 'Out for Delivery', 'Delivered'] %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30{% else %}bg-[#FFF4F3] text-[#777D87]{% endif %}">
+        <i class="fa-solid fa-circle-check block text-base mb-1 text-[#65B9A9]"></i> <span data-i18n="stage_confirmed">1. Confirmed</span>
+      </div>
+      <div class="p-2.5 rounded-2xl transition {% if active_order.status in ['Packed', 'Out for Delivery', 'Delivered'] %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30{% else %}bg-[#FFF4F3] text-[#777D87]{% endif %}">
+        <i class="fa-solid fa-box block text-base mb-1 text-[#65B9A9]"></i> <span data-i18n="stage_packed">2. Packed</span>
+      </div>
+      <div class="p-2.5 rounded-2xl transition {% if active_order.status in ['Out for Delivery', 'Delivered'] %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 animate-pulse{% else %}bg-[#FFF4F3] text-[#777D87]{% endif %}">
+        <i class="fa-solid fa-motorcycle block text-base mb-1 text-[#65B9A9]"></i> <span data-i18n="stage_on_the_way">3. On the Way</span>
+      </div>
+      <div class="p-2.5 rounded-2xl transition {% if active_order.status == 'Delivered' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30{% else %}bg-[#FFF4F3] text-[#777D87]{% endif %}">
+        <i class="fa-solid fa-house-chimney block text-base mb-1 text-[#65B9A9]"></i> <span data-i18n="stage_delivered">4. Delivered</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ==================== HEALTH VITALS QUICK SNAPSHOT ==================== -->
+  <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3.5">
+      <div class="w-12 h-12 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] flex items-center justify-center text-xl font-bold flex-shrink-0">
+        <i class="fa-solid fa-heart-pulse text-[#F28B82]"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h3 class="font-black text-base text-[#30343B]">Senior Health Vitals (BP & Sugar)</h3>
+          <span class="text-[10px] font-bold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 px-2 py-0.5 rounded-full">
+            Clinical Tracker
+          </span>
+        </div>
+        <p class="text-xs font-semibold text-[#777D87] mt-0.5">
+          முதியோர் ரத்த அழுத்தம் & சர்க்கரை அளவு — Daily blood pressure and blood glucose monitor with automatic caregiver SMS safety alerts
+        </p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a href="{{ url_for('vitals') }}" class="inline-flex items-center gap-2 bg-[#F28B82] hover:bg-[#E07067] text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-pastel transition active:scale-95">
+        <i class="fa-solid fa-notes-medical"></i>
+        <span>Open BP & Sugar Monitor</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ==================== 5. TODAY'S MEDICINE SCHEDULE BY SLOTS ==================== -->
+  <div>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-[#30343B] flex items-center gap-2.5 font-display">
+          <i class="fa-solid fa-calendar-day text-[#F28B82]"></i>
+          <span data-i18n="sched_title">Today's Medicine Schedule</span>
+        </h2>
+        <p class="text-[#777D87] font-medium text-sm mt-0.5" data-i18n="sched_desc">
+          Take your daily doses on time. Tap <strong>"Mark Taken"</strong> to record your dose and decrement your home box inventory.
+        </p>
+      </div>
+
+      <a href="{{ url_for('my_prescriptions') }}" class="inline-flex items-center gap-1.5 text-sm font-bold text-[#E07067] hover:underline self-start sm:self-auto">
+        <span data-i18n="sched_full_details">Full Regimen Details</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+
+    <!-- 4 SLOTS GRID: Morning, Afternoon, Evening, Night -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+
+      <!-- SLOT 1: MORNING -->
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-[#EAECEF]">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold shadow-sm">
+                <i class="fa-solid fa-sun"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#30343B]" data-i18n="slot_morning">Morning (காலை)</h3>
+                <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  07:30 AM – 09:30 AM
+                </span>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-[#777D87] bg-[#FFF4F3] px-2.5 py-1 rounded-xl">
+              {{ slots.Morning|length }} Med(s)
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3.5">
+            {% if slots.Morning %}
+              {% for p in slots.Morning %}
+              {% set is_taken = p.id in logged_prescription_ids %}
+              <div id="pill-card-{{ p.id }}" class="p-4 rounded-2xl border transition {% if is_taken %}bg-[#EBF6F4] border-[#65B9A9]/40 opacity-85{% else %}bg-[#FFF4F3] border-[#EAECEF] hover:border-[#F28B82]{% endif %}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 text-sm shadow-sm" style="background-color: {{ p.color_code or '#F28B82' }};">
+                      <i class="fa-solid fa-capsules"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-base font-black text-[#30343B] leading-snug">{{ p.medicine_name }}</h4>
+                      <div class="flex flex-wrap items-center gap-2 mt-1 text-xs font-semibold text-[#777D87]">
+                        <span class="bg-white px-2 py-0.5 rounded-md border border-[#EAECEF] text-[#30343B] font-bold">{{ p.dosage }}</span>
+                        <span class="text-[#E07067] font-semibold"><i class="fa-regular fa-clock mr-1"></i>{{ p.timing_advice }}</span>
+                      </div>
+                      <div class="text-xs text-[#777D87] mt-1">
+                        Stock remaining: <strong id="stock-text-{{ p.id }}" class="text-[#30343B]">{{ p.stock_remaining }}</strong> tabs
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Dose Actions -->
+                  <div class="flex flex-col gap-1.5 items-end flex-shrink-0">
+                    {% if is_taken %}
+                    <span class="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#65B9A9] text-white flex items-center gap-1.5 shadow-sm">
+                      <i class="fa-solid fa-circle-check"></i> Taken
+                    </span>
+                    {% else %}
+                    <button id="btn-dose-{{ p.id }}" onclick="recordDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-[#65B9A9] hover:bg-[#4FA393] text-white shadow-sm transition active:scale-95 flex items-center gap-1.5">
+                      <i class="fa-solid fa-check"></i> Mark Taken
+                    </button>
+                    <button id="btn-skip-{{ p.id }}" onclick="skipDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-2.5 py-1 rounded-lg font-semibold text-[11px] text-[#777D87] hover:bg-white transition border border-transparent hover:border-[#EAECEF]">
+                      Skip Dose
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="py-6 text-center text-[#777D87] text-xs font-semibold">
+                <i class="fa-solid fa-mug-hot text-amber-300 text-2xl mb-1.5 block"></i>
+                No morning medicines scheduled today.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- SLOT 2: AFTERNOON -->
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-[#EAECEF]">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-xl font-bold shadow-sm">
+                <i class="fa-solid fa-sun-plant-wilt"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#30343B]" data-i18n="slot_afternoon">Afternoon (மதியம்)</h3>
+                <span class="text-xs font-semibold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                  12:30 PM – 02:00 PM
+                </span>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-[#777D87] bg-[#FFF4F3] px-2.5 py-1 rounded-xl">
+              {{ slots.Afternoon|length }} Med(s)
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3.5">
+            {% if slots.Afternoon %}
+              {% for p in slots.Afternoon %}
+              {% set is_taken = p.id in logged_prescription_ids %}
+              <div id="pill-card-{{ p.id }}" class="p-4 rounded-2xl border transition {% if is_taken %}bg-[#EBF6F4] border-[#65B9A9]/40 opacity-85{% else %}bg-[#FFF4F3] border-[#EAECEF] hover:border-[#F28B82]{% endif %}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 text-sm shadow-sm" style="background-color: {{ p.color_code or '#F28B82' }};">
+                      <i class="fa-solid fa-capsules"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-base font-black text-[#30343B] leading-snug">{{ p.medicine_name }}</h4>
+                      <div class="flex flex-wrap items-center gap-2 mt-1 text-xs font-semibold text-[#777D87]">
+                        <span class="bg-white px-2 py-0.5 rounded-md border border-[#EAECEF] text-[#30343B] font-bold">{{ p.dosage }}</span>
+                        <span class="text-[#E07067] font-semibold"><i class="fa-regular fa-clock mr-1"></i>{{ p.timing_advice }}</span>
+                      </div>
+                      <div class="text-xs text-[#777D87] mt-1">
+                        Stock remaining: <strong id="stock-text-{{ p.id }}" class="text-[#30343B]">{{ p.stock_remaining }}</strong> tabs
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1.5 items-end flex-shrink-0">
+                    {% if is_taken %}
+                    <span class="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#65B9A9] text-white flex items-center gap-1.5 shadow-sm">
+                      <i class="fa-solid fa-circle-check"></i> Taken
+                    </span>
+                    {% else %}
+                    <button id="btn-dose-{{ p.id }}" onclick="recordDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-[#65B9A9] hover:bg-[#4FA393] text-white shadow-sm transition active:scale-95 flex items-center gap-1.5">
+                      <i class="fa-solid fa-check"></i> Mark Taken
+                    </button>
+                    <button id="btn-skip-{{ p.id }}" onclick="skipDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-2.5 py-1 rounded-lg font-semibold text-[11px] text-[#777D87] hover:bg-white transition border border-transparent hover:border-[#EAECEF]">
+                      Skip Dose
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="py-6 text-center text-[#777D87] text-xs font-semibold">
+                <i class="fa-solid fa-bowl-food text-orange-300 text-2xl mb-1.5 block"></i>
+                No afternoon medicines scheduled today.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- SLOT 3: EVENING -->
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-[#EAECEF]">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl font-bold shadow-sm">
+                <i class="fa-solid fa-cloud-sun"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#30343B]" data-i18n="slot_evening">Evening (மாலை)</h3>
+                <span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  05:30 PM – 07:00 PM
+                </span>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-[#777D87] bg-[#FFF4F3] px-2.5 py-1 rounded-xl">
+              {{ slots.Evening|length }} Med(s)
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3.5">
+            {% if slots.Evening %}
+              {% for p in slots.Evening %}
+              {% set is_taken = p.id in logged_prescription_ids %}
+              <div id="pill-card-{{ p.id }}" class="p-4 rounded-2xl border transition {% if is_taken %}bg-[#EBF6F4] border-[#65B9A9]/40 opacity-85{% else %}bg-[#FFF4F3] border-[#EAECEF] hover:border-[#F28B82]{% endif %}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 text-sm shadow-sm" style="background-color: {{ p.color_code or '#F28B82' }};">
+                      <i class="fa-solid fa-capsules"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-base font-black text-[#30343B] leading-snug">{{ p.medicine_name }}</h4>
+                      <div class="flex flex-wrap items-center gap-2 mt-1 text-xs font-semibold text-[#777D87]">
+                        <span class="bg-white px-2 py-0.5 rounded-md border border-[#EAECEF] text-[#30343B] font-bold">{{ p.dosage }}</span>
+                        <span class="text-[#E07067] font-semibold"><i class="fa-regular fa-clock mr-1"></i>{{ p.timing_advice }}</span>
+                      </div>
+                      <div class="text-xs text-[#777D87] mt-1">
+                        Stock remaining: <strong id="stock-text-{{ p.id }}" class="text-[#30343B]">{{ p.stock_remaining }}</strong> tabs
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1.5 items-end flex-shrink-0">
+                    {% if is_taken %}
+                    <span class="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#65B9A9] text-white flex items-center gap-1.5 shadow-sm">
+                      <i class="fa-solid fa-circle-check"></i> Taken
+                    </span>
+                    {% else %}
+                    <button id="btn-dose-{{ p.id }}" onclick="recordDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-[#65B9A9] hover:bg-[#4FA393] text-white shadow-sm transition active:scale-95 flex items-center gap-1.5">
+                      <i class="fa-solid fa-check"></i> Mark Taken
+                    </button>
+                    <button id="btn-skip-{{ p.id }}" onclick="skipDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-2.5 py-1 rounded-lg font-semibold text-[11px] text-[#777D87] hover:bg-white transition border border-transparent hover:border-[#EAECEF]">
+                      Skip Dose
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="py-6 text-center text-[#777D87] text-xs font-semibold">
+                <i class="fa-solid fa-couch text-indigo-300 text-2xl mb-1.5 block"></i>
+                No evening medicines scheduled today.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- SLOT 4: NIGHT -->
+      <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-[#EAECEF]">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold shadow-sm">
+                <i class="fa-solid fa-moon"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#30343B]" data-i18n="slot_night">Night (இரவு)</h3>
+                <span class="text-xs font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  08:30 PM – 10:00 PM
+                </span>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-[#777D87] bg-[#FFF4F3] px-2.5 py-1 rounded-xl">
+              {{ slots.Night|length }} Med(s)
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3.5">
+            {% if slots.Night %}
+              {% for p in slots.Night %}
+              {% set is_taken = p.id in logged_prescription_ids %}
+              <div id="pill-card-{{ p.id }}" class="p-4 rounded-2xl border transition {% if is_taken %}bg-[#EBF6F4] border-[#65B9A9]/40 opacity-85{% else %}bg-[#FFF4F3] border-[#EAECEF] hover:border-[#F28B82]{% endif %}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 text-sm shadow-sm" style="background-color: {{ p.color_code or '#F28B82' }};">
+                      <i class="fa-solid fa-capsules"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-base font-black text-[#30343B] leading-snug">{{ p.medicine_name }}</h4>
+                      <div class="flex flex-wrap items-center gap-2 mt-1 text-xs font-semibold text-[#777D87]">
+                        <span class="bg-white px-2 py-0.5 rounded-md border border-[#EAECEF] text-[#30343B] font-bold">{{ p.dosage }}</span>
+                        <span class="text-[#E07067] font-semibold"><i class="fa-regular fa-clock mr-1"></i>{{ p.timing_advice }}</span>
+                      </div>
+                      <div class="text-xs text-[#777D87] mt-1">
+                        Stock remaining: <strong id="stock-text-{{ p.id }}" class="text-[#30343B]">{{ p.stock_remaining }}</strong> tabs
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1.5 items-end flex-shrink-0">
+                    {% if is_taken %}
+                    <span class="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#65B9A9] text-white flex items-center gap-1.5 shadow-sm">
+                      <i class="fa-solid fa-circle-check"></i> Taken
+                    </span>
+                    {% else %}
+                    <button id="btn-dose-{{ p.id }}" onclick="recordDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-3.5 py-2 rounded-xl font-bold text-xs bg-[#65B9A9] hover:bg-[#4FA393] text-white shadow-sm transition active:scale-95 flex items-center gap-1.5">
+                      <i class="fa-solid fa-check"></i> Mark Taken
+                    </button>
+                    <button id="btn-skip-{{ p.id }}" onclick="skipDose({{ p.id }}, '{{ p.medicine_name }}')" class="px-2.5 py-1 rounded-lg font-semibold text-[11px] text-[#777D87] hover:bg-white transition border border-transparent hover:border-[#EAECEF]">
+                      Skip Dose
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="py-6 text-center text-[#777D87] text-xs font-semibold">
+                <i class="fa-solid fa-bed text-purple-300 text-2xl mb-1.5 block"></i>
+                No night medicines scheduled today.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== 6. QUICK ACTION SHORTCUTS ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-card border border-[#EAECEF]">
+    <h3 class="text-lg font-black text-[#30343B] mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-bolt text-[#F28B82]"></i>
+      <span>Quick Health Actions</span>
+    </h3>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Action 1: Add New Medicine -->
+      <a href="{{ url_for('medicines_directory') }}" class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] hover:bg-[#FDECEB] transition flex items-center gap-3.5 group">
+        <div class="w-10 h-10 rounded-xl bg-white text-[#F28B82] flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition">
+          <i class="fa-solid fa-plus"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold text-[#30343B]">Add Medicine</div>
+          <div class="text-xs text-[#777D87]">Search A to Z catalog</div>
+        </div>
+      </a>
+
+      <!-- Action 2: Doorstep Refill -->
+      <a href="{{ url_for('refill') }}" class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] hover:bg-[#FDECEB] transition flex items-center gap-3.5 group">
+        <div class="w-10 h-10 rounded-xl bg-white text-[#65B9A9] flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition">
+          <i class="fa-solid fa-truck-medical"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold text-[#30343B]">Doorstep Refill</div>
+          <div class="text-xs text-[#777D87]">Deliver to home address</div>
+        </div>
+      </a>
+
+      <!-- Action 3: Printable Timetable -->
+      <a href="{{ url_for('print_schedule_card') }}" class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] hover:bg-[#FDECEB] transition flex items-center gap-3.5 group">
+        <div class="w-10 h-10 rounded-xl bg-white text-indigo-500 flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition">
+          <i class="fa-solid fa-print"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold text-[#30343B]">Printable Chart</div>
+          <div class="text-xs text-[#777D87]">Large A4 paper timetable</div>
+        </div>
+      </a>
+
+      <!-- Action 4: Caregiver Portal -->
+      <a href="{{ url_for('caregiver') }}" class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] hover:bg-[#FDECEB] transition flex items-center gap-3.5 group">
+        <div class="w-10 h-10 rounded-xl bg-white text-purple-600 flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition">
+          <i class="fa-solid fa-hand-holding-heart"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold text-[#30343B]">Caregiver Portal</div>
+          <div class="text-xs text-[#777D87]">Adherence & Linked Patients</div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ==================== 7. CLINICAL TRANSPARENCY NOTICE ==================== -->
+  <div class="bg-white rounded-3xl p-5 shadow-card border border-[#EAECEF] flex items-start gap-3.5 text-xs text-[#777D87]">
+    <div class="w-8 h-8 rounded-xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center flex-shrink-0 text-sm">
+      <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <div class="leading-relaxed">
+      <strong class="text-[#30343B] font-bold" data-i18n="adherence_disclaimer_title">Medication Adherence Transparency & Disclaimer:</strong>
+      <span data-i18n="adherence_p1">ElderCare MedTrack records medication adherence reported by the senior or visiting caregiver. The system calculates estimated home inventory based on logged confirmations.</span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

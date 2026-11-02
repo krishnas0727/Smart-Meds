@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Printable Medicine Timetable Card — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- ==================== TOP BAR (SCREEN ONLY) ==================== -->
+  <div class="no-print bg-white p-5 rounded-3xl shadow-card border border-[#EAECEF] flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('my_prescriptions') }}" class="w-10 h-10 rounded-2xl bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] flex items-center justify-center transition border border-[#EAECEF]">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="text-lg sm:text-xl font-black text-[#30343B] flex items-center gap-2 font-display">
+          <i class="fa-solid fa-print text-[#F28B82]"></i>
+          <span>Physical Printable Medication Timetable</span>
+        </h1>
+        <p class="text-xs text-[#777D87] font-medium">Mount on refrigerator or beside bed for elderly relatives without smartphones.</p>
+      </div>
+    </div>
+
+    <!-- Actions & Patient Switcher -->
+    <div class="flex items-center gap-3">
+      {% if patients and patients|length > 1 %}
+      <form method="GET" action="{{ url_for('print_schedule_card') }}" class="flex items-center gap-2">
+        <label class="text-xs font-bold text-[#777D87]">Patient:</label>
+        <select name="patient_id" onchange="this.form.submit()" class="text-xs font-bold bg-[#FFF4F3] border border-[#EAECEF] rounded-xl px-3 py-2 text-[#30343B]">
+          {% for p in patients %}
+          <option value="{{ p.id }}" {% if p.id == patient.id %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+
+      <button onclick="window.print()" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold text-xs sm:text-sm px-6 py-2.5 rounded-2xl shadow-pastel flex items-center gap-2 transition active:scale-95">
+        <i class="fa-solid fa-print"></i>
+        <span>Print Card (A4)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- EXAMINER NOTE (SCREEN ONLY) -->
+  <div class="no-print bg-white rounded-3xl p-5 border border-[#EAECEF] shadow-card text-xs text-[#777D87] space-y-1">
+    <div class="font-bold text-[#30343B] flex items-center gap-2 text-xs">
+      <i class="fa-solid fa-lightbulb text-amber-500 text-sm"></i>
+      <span>Smartphone-Free Accessibility Solution:</span>
+    </div>
+    <p class="leading-relaxed">
+      This physical timetable chart can be printed by the patient, family caregiver, or care team. High contrast, large typography, visual meal icons, and bilingual Tamil/English instructions ensure zero digital barrier for seniors who do not operate smartphones.
+    </p>
+  </div>
+
+  <!-- ==================== PRINTABLE A4 TIMETABLE SHEET ==================== -->
+  <div id="printableCard" class="print-card-content bg-white border-2 border-[#30343B] rounded-3xl p-6 sm:p-10 shadow-card space-y-6 text-[#30343B]">
+
+    <!-- HEADER / PATIENT ID BAR -->
+    <div class="border-b-2 border-[#30343B] pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-2 bg-[#30343B] text-white px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">
+          ElderCare MedTrack &bull; Daily Medicine Chart &bull; Medication Schedule
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black text-[#30343B] tracking-tight">
+          {{ patient.name if patient else 'Senior Patient' }}
+        </h2>
+        <div class="text-xs sm:text-sm font-semibold text-[#777D87]">
+          Age: <strong class="text-[#30343B]">{{ patient.age if patient else '72' }}</strong> | 
+          Gender: <strong class="text-[#30343B]">{{ patient.gender if patient else 'Male' }}</strong> | 
+          Blood: <strong class="text-rose-600 font-bold">{{ patient.blood_group if patient else 'B+' }}</strong> | 
+          Mobility: <strong class="text-[#30343B]">{{ patient.mobility_status if patient else 'Assisted Walker' }}</strong>
+        </div>
+      </div>
+
+      <!-- Emergency Hotline Card -->
+      <div class="bg-[#FFF4F3] border border-[#FCDAD7] p-3.5 rounded-2xl text-left sm:text-right sm:min-w-[210px] text-xs">
+        <div class="text-[10px] font-bold uppercase text-[#E07067] tracking-wider">Emergency Hotlines</div>
+        <div class="text-base font-black text-rose-600">Ambulance: 108</div>
+        <div class="font-bold text-[#30343B] mt-0.5">Caregiver: {{ patient.caregiver_phone if patient else '98765-43210' }}</div>
+        <div class="font-bold text-[#30343B]">Pharmacy contact: use the verified number provided by your dispensing pharmacy.</div>
+      </div>
+    </div>
+
+    <!-- FOUR MEAL TIME SLOTS (HIGH CONTRAST GRID) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+
+      <!-- 1. MORNING (KAALAI) -->
+      <div class="border-2 border-amber-300 rounded-2xl p-4 bg-amber-50/40 space-y-2.5">
+        <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-amber-400 text-[#30343B] flex items-center justify-center text-lg font-black shadow-sm">
+              <i class="fa-solid fa-sun"></i>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#30343B] leading-tight">MORNING / காலை</h3>
+              <span class="text-[11px] font-bold text-amber-900">8:00 AM &bull; With / After Breakfast</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+            {{ slots.Morning|length }} Med(s)
+          </span>
+        </div>
+
+        <div class="space-y-2 min-h-[70px]">
+          {% for p in slots.Morning %}
+          <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-black text-[#30343B]">{{ p.medicine_name }}</div>
+              <div class="text-xs text-[#777D87] mt-0.5">
+                Dosage: <strong class="text-amber-800 font-bold">{{ p.dosage }}</strong> &bull; 
+                <span>{{ p.timing_advice }}</span>
+              </div>
+              {% if p.doctor_notes %}
+              <div class="text-[11px] text-[#777D87] italic mt-0.5">&bull; {{ p.doctor_notes }}</div>
+              {% endif %}
+            </div>
+            <div class="w-6 h-6 rounded-full flex-shrink-0 border border-[#30343B] flex items-center justify-center text-[10px] font-bold text-[#30343B] bg-white">
+              1
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-[#777D87] text-xs font-semibold italic">
+            No morning medicines prescribed
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 2. AFTERNOON (MADHIYAM) -->
+      <div class="border-2 border-[#65B9A9] rounded-2xl p-4 bg-[#EBF6F4]/50 space-y-2.5">
+        <div class="flex items-center justify-between border-b border-[#65B9A9]/40 pb-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-[#65B9A9] text-white flex items-center justify-center text-lg font-black shadow-sm">
+              <i class="fa-solid fa-cloud-sun"></i>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#30343B] leading-tight">AFTERNOON / மதியம்</h3>
+              <span class="text-[11px] font-bold text-[#3D8577]">1:00 PM &bull; With / After Lunch</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold bg-[#D7EDE9] text-[#3D8577] px-2 py-0.5 rounded-full border border-[#65B9A9]/30">
+            {{ slots.Afternoon|length }} Med(s)
+          </span>
+        </div>
+
+        <div class="space-y-2 min-h-[70px]">
+          {% for p in slots.Afternoon %}
+          <div class="bg-white p-3 rounded-xl border border-[#65B9A9]/30 shadow-sm flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-black text-[#30343B]">{{ p.medicine_name }}</div>
+              <div class="text-xs text-[#777D87] mt-0.5">
+                Dosage: <strong class="text-[#3D8577] font-bold">{{ p.dosage }}</strong> &bull; 
+                <span>{{ p.timing_advice }}</span>
+              </div>
+              {% if p.doctor_notes %}
+              <div class="text-[11px] text-[#777D87] italic mt-0.5">&bull; {{ p.doctor_notes }}</div>
+              {% endif %}
+            </div>
+            <div class="w-6 h-6 rounded-full flex-shrink-0 border border-[#30343B] flex items-center justify-center text-[10px] font-bold text-[#30343B] bg-white">
+              1
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-[#777D87] text-xs font-semibold italic">
+            No afternoon medicines prescribed
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 3. EVENING (MAALAI) -->
+      <div class="border-2 border-orange-300 rounded-2xl p-4 bg-orange-50/40 space-y-2.5">
+        <div class="flex items-center justify-between border-b border-orange-200 pb-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-orange-400 text-white flex items-center justify-center text-lg font-black shadow-sm">
+              <i class="fa-solid fa-mug-hot"></i>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#30343B] leading-tight">EVENING / மாலை</h3>
+              <span class="text-[11px] font-bold text-orange-900">5:30 PM &bull; Tea / Snacks Time</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold bg-orange-100 text-orange-950 px-2 py-0.5 rounded-full border border-orange-200">
+            {{ slots.Evening|length }} Med(s)
+          </span>
+        </div>
+
+        <div class="space-y-2 min-h-[70px]">
+          {% for p in slots.Evening %}
+          <div class="bg-white p-3 rounded-xl border border-orange-200 shadow-sm flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-black text-[#30343B]">{{ p.medicine_name }}</div>
+              <div class="text-xs text-[#777D87] mt-0.5">
+                Dosage: <strong class="text-orange-800 font-bold">{{ p.dosage }}</strong> &bull; 
+                <span>{{ p.timing_advice }}</span>
+              </div>
+              {% if p.doctor_notes %}
+              <div class="text-[11px] text-[#777D87] italic mt-0.5">&bull; {{ p.doctor_notes }}</div>
+              {% endif %}
+            </div>
+            <div class="w-6 h-6 rounded-full flex-shrink-0 border border-[#30343B] flex items-center justify-center text-[10px] font-bold text-[#30343B] bg-white">
+              1
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-[#777D87] text-xs font-semibold italic">
+            No evening medicines prescribed
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- 4. NIGHT (IRAVU) -->
+      <div class="border-2 border-indigo-300 rounded-2xl p-4 bg-indigo-50/40 space-y-2.5">
+        <div class="flex items-center justify-between border-b border-indigo-200 pb-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-sm">
+              <i class="fa-solid fa-moon"></i>
+            </span>
+            <div>
+              <h3 class="text-base font-black text-[#30343B] leading-tight">NIGHT / இரவு</h3>
+              <span class="text-[11px] font-bold text-indigo-950">8:30 PM &bull; Dinner / Before Sleep</span>
+            </div>
+          </div>
+          <span class="text-[11px] font-bold bg-indigo-100 text-indigo-950 px-2 py-0.5 rounded-full border border-indigo-200">
+            {{ slots.Night|length }} Med(s)
+          </span>
+        </div>
+
+        <div class="space-y-2 min-h-[70px]">
+          {% for p in slots.Night %}
+          <div class="bg-white p-3 rounded-xl border border-indigo-200 shadow-sm flex items-start justify-between gap-3">
+            <div>
+              <div class="text-sm font-black text-[#30343B]">{{ p.medicine_name }}</div>
+              <div class="text-xs text-[#777D87] mt-0.5">
+                Dosage: <strong class="text-indigo-800 font-bold">{{ p.dosage }}</strong> &bull; 
+                <span>{{ p.timing_advice }}</span>
+              </div>
+              {% if p.doctor_notes %}
+              <div class="text-[11px] text-[#777D87] italic mt-0.5">&bull; {{ p.doctor_notes }}</div>
+              {% endif %}
+            </div>
+            <div class="w-6 h-6 rounded-full flex-shrink-0 border border-[#30343B] flex items-center justify-center text-[10px] font-bold text-[#30343B] bg-white">
+              1
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-[#777D87] text-xs font-semibold italic">
+            No night medicines prescribed
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER INSTRUCTIONS & TAMIL GUIDANCE -->
+    <div class="border-t-2 border-[#30343B] pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+      <div class="space-y-0.5">
+        <strong class="text-[#30343B] block uppercase text-[10px]">Senior Home Address:</strong>
+        <p class="text-[#777D87] leading-relaxed">{{ patient.address if patient else '14 North Veli Street, Madurai' }}</p>
+      </div>
+
+      <div class="space-y-0.5">
+        <strong class="text-[#30343B] block uppercase text-[10px]">Attending Geriatrician:</strong>
+        <p class="text-[#777D87]">{{ patient.doctor_name if patient else 'Dr. K. S. Rajan' }} (Ph: {{ patient.doctor_phone if patient else '0452-2531000' }})</p>
+      </div>
+
+      <div class="space-y-0.5 bg-[#FFF4F3] p-2.5 rounded-xl border border-[#FCDAD7]">
+        <strong class="text-[#E07067] block text-[10px] uppercase">Tamil Schedule Advice:</strong>
+        <p class="text-[#30343B] text-[11px] leading-snug">
+          மருந்துகளை சாப்பாட்டுக்கு பின் உரிய நேரத்தில் தவறாமல் சாப்பிடவும். மாத்திரை தீரும் முன் ரீபில் செய்யவும்.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

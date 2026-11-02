@@ -1,0 +1,758 @@
+{% extends "base.html" %}
+
+{% block title %}Live Order Tracking #{{ order.order_number }} — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+{% if send_wa %}
+<!-- ==================== AUTO WHATSAPP DISPATCH MODAL ==================== -->
+<div id="auto-wa-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+  <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#EAECEF] text-center space-y-4">
+    <div class="w-16 h-16 rounded-3xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center text-3xl mx-auto shadow-sm">
+      <i class="fa-brands fa-whatsapp"></i>
+    </div>
+    <div>
+      <h3 class="text-xl font-black text-[#30343B]">Order Placed Successfully!</h3>
+      <p class="text-xs text-[#777D87] font-semibold mt-1">
+        Sending Live Location Tracker to WhatsApp: <strong class="text-[#30343B]">+91 {{ contact_phone }}</strong>
+      </p>
+    </div>
+    <div class="p-3 bg-[#EBF6F4] rounded-2xl border border-[#65B9A9]/40 text-xs text-[#3D8577] font-bold break-all">
+      <i class="fa-solid fa-location-dot mr-1 text-[#65B9A9]"></i> {{ tracking_url }}
+    </div>
+    <div class="pt-2 flex flex-col gap-2">
+      <a id="auto-wa-btn" href="{{ whatsapp_url }}" target="_blank" onclick="closeAutoWaModal()" class="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20BD5A] text-white font-black text-sm flex items-center justify-center gap-2 shadow-pastel transition active:scale-95">
+        <i class="fa-brands fa-whatsapp text-lg"></i>
+        <span>Open WhatsApp Now & Send</span>
+        <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-80"></i>
+      </a>
+      <button type="button" onclick="closeAutoWaModal()" class="text-xs font-bold text-[#777D87] hover:underline py-1">
+        Continue to Tracking Page
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- ==================== TOP NAVIGATION BREADCRUMB ==================== -->
+  <div class="flex items-center justify-between">
+    <a href="{{ url_for('orders') }}" class="inline-flex items-center gap-2 text-xs font-bold text-[#30343B] hover:text-[#E07067] bg-white px-4 py-2.5 rounded-2xl border border-[#EAECEF] transition shadow-card">
+      <i class="fa-solid fa-arrow-left text-[#F28B82]"></i>
+      <span>Back to Order History</span>
+    </a>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold bg-[#FFF4F3] text-[#E07067] border border-[#FCDAD7] px-3.5 py-1.5 rounded-full">
+        <i class="fa-solid fa-truck-fast mr-1 text-[#F28B82]"></i> Live Doorstep Tracking
+      </span>
+      <button onclick="window.print()" class="text-xs font-bold bg-white hover:bg-slate-50 text-[#30343B] border border-[#EAECEF] px-3 py-1.5 rounded-2xl shadow-card transition flex items-center gap-1.5">
+        <i class="fa-solid fa-print text-[#777D87]"></i>
+        <span class="hidden sm:inline">Print Receipt</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== ORDER HEADER CARD ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div class="space-y-2">
+        <div class="inline-flex items-center gap-2 bg-[#FFF4F3] border border-[#FCDAD7] px-3.5 py-1 rounded-full text-xs font-bold text-[#E07067]">
+          <span class="w-2 h-2 rounded-full bg-[#65B9A9] animate-pulse"></span>
+          <span>Order status details</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-[#30343B] tracking-tight font-display">
+          Order #{{ order.order_number }}
+        </h1>
+        <p class="text-xs sm:text-sm font-semibold text-[#777D87]">
+          Placed on <strong class="text-[#30343B]">{{ order.created_at }}</strong> | Source: <span class="bg-[#FFF4F3] px-2 py-0.5 rounded-lg border border-[#FCDAD7] text-[#E07067] font-bold">{{ order.order_source or 'DIRECT_MEDICINE_CATALOG' }}</span>
+        </p>
+      </div>
+
+      <!-- Right: Total Amount & Status Badge -->
+      <div class="text-left md:text-right flex md:flex-col items-center md:items-end justify-between gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-[#EAECEF]">
+        <div>
+          <div class="text-xs font-bold uppercase tracking-wider text-[#777D87]">Server-Verified Total</div>
+          <div class="text-2xl sm:text-3xl font-black text-[#30343B]">₹{{ order.total_amount|round(0)|int }}</div>
+          <div class="text-xs font-semibold text-[#777D87]">{{ order.payment_method }}</div>
+        </div>
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider
+            {% if order.status == 'Delivered' %}bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40
+            {% elif order.status == 'Cancelled' %}bg-rose-100 text-rose-800 border border-rose-300
+            {% elif order.status == 'Out for Delivery' %}bg-amber-100 text-amber-900 border border-amber-300 animate-pulse
+            {% elif order.status == 'Processing' or order.status == 'Packed' %}bg-blue-100 text-blue-900 border border-blue-200
+            {% else %}bg-[#FDECEB] text-[#E07067] border border-[#FCDAD7]{% endif %}">
+            <i class="fa-solid 
+              {% if order.status == 'Delivered' %}fa-circle-check
+              {% elif order.status == 'Cancelled' %}fa-circle-xmark
+              {% elif order.status == 'Out for Delivery' %}fa-motorcycle
+              {% else %}fa-clock{% endif %}"></i>
+            {{ order.status }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 5-STAGE PROGRESSION TIMELINE ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-4">
+    <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+      <i class="fa-solid fa-timeline text-[#F28B82]"></i>
+      <span>Fulfillment Progression</span>
+    </h2>
+
+    {% if order.status == 'Cancelled' %}
+    <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-800 text-xs sm:text-sm font-semibold">
+      <i class="fa-solid fa-ban text-xl text-rose-600 flex-shrink-0"></i>
+      <div>
+        <div class="font-black text-rose-900">This order has been cancelled</div>
+        <p class="text-xs text-rose-700 mt-0.5">Reason: {{ order.cancellation_reason or 'Requested by patient/pharmacist' }}. Reserved pharmacy stock has been restored if it was reserved.</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 py-2">
+      
+      <!-- Stage 1: Confirmed -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border text-center transition
+        {% if order.status in ['Confirmed', 'Accepted', 'Processing', 'Packed', 'Out for Delivery', 'Delivered'] %}
+        bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+        {% else %}bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]{% endif %}">
+        <div class="w-9 h-9 rounded-xl mx-auto flex items-center justify-center text-base font-black mb-1.5
+          {% if order.status in ['Confirmed', 'Accepted', 'Processing', 'Packed', 'Out for Delivery', 'Delivered'] %}bg-[#65B9A9] text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+          <i class="fa-solid fa-receipt"></i>
+        </div>
+        <div class="text-xs font-black text-[#30343B]">1. Confirmed</div>
+        <div class="text-[10px] text-[#777D87] mt-0.5">Stock reserved</div>
+      </div>
+
+      <!-- Stage 2: Processing / Packed -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border text-center transition
+        {% if order.status in ['Processing', 'Packed', 'Out for Delivery', 'Delivered'] %}
+        bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+        {% else %}bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]{% endif %}">
+        <div class="w-9 h-9 rounded-xl mx-auto flex items-center justify-center text-base font-black mb-1.5
+          {% if order.status in ['Processing', 'Packed', 'Out for Delivery', 'Delivered'] %}bg-[#65B9A9] text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+          <i class="fa-solid fa-box-open"></i>
+        </div>
+        <div class="text-xs font-black text-[#30343B]">2. Packed</div>
+        <div class="text-[10px] text-[#777D87] mt-0.5">Tamper-sealed</div>
+      </div>
+
+      <!-- Stage 3: Out for Delivery -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border text-center transition
+        {% if order.status in ['Out for Delivery', 'Delivered'] %}
+        bg-amber-50 border-amber-300 text-amber-900 {% if order.status == 'Out for Delivery' %}animate-pulse{% endif %}
+        {% else %}bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]{% endif %}">
+        <div class="w-9 h-9 rounded-xl mx-auto flex items-center justify-center text-base font-black mb-1.5
+          {% if order.status in ['Out for Delivery', 'Delivered'] %}bg-amber-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+          <i class="fa-solid fa-motorcycle"></i>
+        </div>
+        <div class="text-xs font-black text-[#30343B]">3. Out for Delivery</div>
+        <div class="text-[10px] text-[#777D87] mt-0.5">Courier assigned</div>
+      </div>
+
+      <!-- Stage 4: Delivered -->
+      <div class="p-3.5 sm:p-4 rounded-2xl border text-center transition
+        {% if order.status == 'Delivered' %}
+        bg-[#EBF6F4] border-[#65B9A9]/40 text-[#3D8577]
+        {% else %}bg-[#FFF4F3] border-[#EAECEF] text-[#777D87]{% endif %}">
+        <div class="w-9 h-9 rounded-xl mx-auto flex items-center justify-center text-base font-black mb-1.5
+          {% if order.status == 'Delivered' %}bg-[#65B9A9] text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+          <i class="fa-solid fa-house-circle-check"></i>
+        </div>
+        <div class="text-xs font-black text-[#30343B]">4. Marked delivered</div>
+        <div class="text-[10px] text-[#777D87] mt-0.5">Home-stock record updated</div>
+      </div>
+
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ==================== ORDER STATUS (NO GPS PROVIDER) ==================== -->
+  
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#EAECEF] gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-[#EBF6F4] border border-[#65B9A9]/30 flex items-center justify-center text-[#3D8577] text-2xl flex-shrink-0">
+          <i class="fa-solid fa-map-location-dot text-[#65B9A9]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-black text-[#30343B]">Order status tracking</h2>
+            <span class="text-[10px] font-bold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span>No GPS provider</span>
+            </span>
+          </div>
+          <p class="text-xs font-semibold text-[#777D87] mt-0.5">
+            Illustrative route only. No courier GPS device or delivery-provider integration is configured.
+          </p>
+        </div>
+      </div>
+
+      <!-- Order Status Badge -->
+      <div class="flex items-center gap-2" id="eta-pill-container">
+        {% if order.status == 'Delivered' %}
+        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-black bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40">
+          <i class="fa-solid fa-house-circle-check text-sm text-[#65B9A9]"></i>
+          <span>Marked delivered</span>
+        </span>
+        {% elif order.status == 'Out for Delivery' %}
+        <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl text-xs font-black bg-amber-50 text-amber-900 border border-amber-300 animate-pulse">
+          <i class="fa-solid fa-motorcycle text-amber-600"></i>
+          <span>Out for delivery — courier GPS and ETA are not available.</span>
+        </span>
+        {% elif order.status in ['Packed', 'Processing'] %}
+        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-black bg-blue-50 text-blue-900 border border-blue-200">
+          <i class="fa-solid fa-box-open text-blue-600"></i>
+          <span>Processing status recorded; no delivery ETA is available.</span>
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl text-xs font-black bg-[#FFF4F3] text-[#E07067] border border-[#FCDAD7]">
+          <i class="fa-solid fa-clock text-[#F28B82]"></i>
+          <span>Order status: {{ order.status }}. Pharmacy and delivery details may not be configured.</span>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Location is intentionally not simulated when no GPS provider is configured. -->
+    <div id="delivery-map" role="status" aria-live="polite" class="w-full min-h-36 rounded-2xl border border-[#EAECEF] bg-slate-50 p-6 flex items-center justify-center text-center">
+      <div>
+        <i class="fa-solid fa-location-dot text-2xl text-slate-400"></i>
+        <p class="mt-2 font-bold text-[#30343B]">Live courier GPS is not configured.</p>
+        <p class="mt-1 text-sm text-[#777D87]">This page shows order-status changes only; it does not provide a live map or delivery ETA.</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-4 border border-[#EAECEF]">
+      <h3 class="font-black text-sm text-[#30343B]">Courier details</h3>
+      {% if rider_name or rider_phone or rider_vehicle %}
+      <p class="mt-2 text-sm text-[#777D87]">{% if rider_name %}{{ rider_name }}{% endif %}{% if rider_vehicle %} · {{ rider_vehicle }}{% endif %}</p>
+      {% if rider_phone %}<a class="inline-flex mt-2 text-sm font-bold text-indigo-700" href="tel:{{ rider_phone }}">Call the assigned courier</a>{% endif %}
+      {% else %}
+      <p class="mt-2 text-sm text-[#777D87]">No courier has been assigned or verified in this system.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ==================== UPI PAYMENT QR SCANNER CARD ==================== -->
+  <div id="payment-scanner-card" class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border-2 {% if open_payment %}border-indigo-400 ring-4 ring-indigo-50{% else %}border-[#EAECEF]{% endif %} space-y-5 animate-fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#EAECEF] gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-2xl flex-shrink-0">
+          <i class="fa-solid fa-qrcode"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-black text-[#30343B]">UPI Payment QR Code & Scanner</h2>
+            <span class="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+              Doorstep / Online UPI
+            </span>
+          </div>
+          <p class="text-xs font-semibold text-[#777D87] mt-0.5">
+            கூரியர் அல்லது ஆன்லைன் கட்டணம் — Scan QR with Google Pay, PhonePe, Paytm, or BHIM.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-[#777D87]">Payable:</span>
+        <span class="text-2xl font-black text-emerald-600">₹{{ order.total_amount|round(0)|int }}</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+      <!-- Left: QR Code Display -->
+      <div class="flex flex-col items-center justify-center p-5 bg-gradient-to-b from-indigo-50/50 to-white rounded-2xl border border-indigo-100 space-y-3">
+        <div class="bg-white p-3 rounded-2xl shadow-md border border-[#EAECEF] relative group">
+          <img src="{{ upi_qr_url }}" alt="UPI QR Code for Payment" class="w-52 h-52 object-contain rounded-xl">
+        </div>
+        <p class="text-[11px] font-bold text-[#777D87] text-center">
+          <i class="fa-solid fa-camera mr-1 text-indigo-600"></i> Open any UPI Camera & Scan to Pay ₹{{ order.total_amount|round(0)|int }}
+        </p>
+      </div>
+
+      <!-- Right: UPI Actions & App Badges -->
+      <div class="space-y-4">
+        <div class="bg-[#FFF4F3] p-4 rounded-2xl border border-[#FCDAD7] space-y-2">
+          <div class="text-[11px] font-bold uppercase text-[#777D87]">Official Pharmacy UPI VPA</div>
+          <div class="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-[#EAECEF]">
+            <span class="font-mono font-bold text-sm text-[#30343B]" id="upi-vpa-text">{{ upi_pa }}</span>
+            <button type="button" onclick="navigator.clipboard.writeText('{{ upi_pa }}'); this.innerText='Copied!';" class="text-xs font-bold text-[#E07067] hover:underline">Copy</button>
+          </div>
+          <div class="text-[10px] text-[#777D87]">Verified Merchant: <strong>SmartMeds Pharmacy Care</strong></div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-[#30343B]">Supported Apps:</div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-1 bg-white border border-[#EAECEF] rounded-lg text-xs font-bold text-slate-700 flex items-center gap-1.5 shadow-xs"><i class="fa-brands fa-google-pay text-base text-blue-600"></i> GPay</span>
+            <span class="px-2.5 py-1 bg-white border border-[#EAECEF] rounded-lg text-xs font-bold text-purple-800 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-wallet text-purple-600"></i> PhonePe</span>
+            <span class="px-2.5 py-1 bg-white border border-[#EAECEF] rounded-lg text-xs font-bold text-sky-800 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-mobile text-sky-500"></i> Paytm</span>
+            <span class="px-2.5 py-1 bg-white border border-[#EAECEF] rounded-lg text-xs font-bold text-emerald-800 flex items-center gap-1.5 shadow-xs"><i class="fa-solid fa-building-columns text-emerald-600"></i> BHIM UPI</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-2 pt-2">
+          <a href="{{ upi_url }}" class="w-full sm:w-auto flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-3 rounded-2xl shadow-md transition text-center flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Pay on Phone (UPI App)</span>
+          </a>
+          <button type="button" onclick="document.getElementById('payment-confirmed-badge').classList.remove('hidden');" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs px-4 py-3 rounded-2xl transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-check text-emerald-600"></i>
+            <span>Confirm Payment Done</span>
+          </button>
+        </div>
+        <div id="payment-confirmed-badge" class="hidden p-3 rounded-xl bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40 text-xs font-bold flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+          <span>Payment marked as completed by patient. Staff will verify upon physical handover.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WHATSAPP ORDER SHARING CARD ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#EAECEF] gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-[#25D366]/15 border border-[#25D366]/30 flex items-center justify-center text-[#128C7E] text-2xl flex-shrink-0">
+          <i class="fa-brands fa-whatsapp text-[#25D366]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-black text-[#30343B]">Share order status on WhatsApp</h2>
+            <span class="text-[10px] font-bold bg-[#25D366]/10 text-[#128C7E] border border-[#25D366]/30 px-2 py-0.5 rounded-full">
+              On demand
+            </span>
+          </div>
+          <p class="text-xs font-semibold text-[#777D87] mt-0.5">
+            வாட்ஸ்அப் மூலம் நிலையைப் பகிரவும் — Sharing happens only after you choose it.
+          </p>
+        </div>
+      </div>
+
+      <div id="wa-status-badge">
+        {% if order.whatsapp_notified %}
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40">
+          <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+          <span>WhatsApp Sent</span>
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+          <i class="fa-solid fa-clock text-amber-600"></i>
+          <span>Tracking Ready</span>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Contact Number Notification Panel -->
+    <div class="bg-[#FFF4F3] rounded-2xl p-4 sm:p-5 border border-[#FCDAD7] space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-[#777D87]">
+            Recipient WhatsApp Contact Number (எந்த எண் கொடுக்கப்பட்டதோ அந்த எண்):
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-mobile-screen-button text-[#F28B82]"></i>
+            <span class="text-lg font-black text-[#30343B]">+91 {{ contact_phone }}</span>
+            <span class="text-[11px] font-semibold text-[#777D87]">
+              ({{ patient.name if patient else 'Senior Patient' }})
+            </span>
+          </div>
+        </div>
+
+        <!-- 1-Click WhatsApp Direct Open Button -->
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer"
+             class="bg-[#25D366] hover:bg-[#20BD5A] text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-md transition active:scale-95 flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-lg"></i>
+            <span>Share order status</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-80"></i>
+          </a>
+
+          <button type="button" onclick="triggerWhatsAppDispatch({{ order.id }})" id="btn-dispatch-wa"
+                  class="bg-white hover:bg-slate-50 text-[#30343B] border border-[#EAECEF] font-bold text-xs px-4 py-3 rounded-2xl shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane text-[#F28B82]"></i>
+            <span>Send status message</span>
+          </button>
+        </div>
+      </div>
+
+      {% if caregiver_phone and whatsapp_caregiver_url %}
+      <div class="pt-2 border-t border-[#FCDAD7]/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[#777D87] gap-2">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-heart text-[#65B9A9]"></i>
+          <span>Authorized Caregiver: <strong class="text-[#30343B]">+91 {{ caregiver_phone }}</strong> ({{ patient.caregiver_name if patient else 'Family Caregiver' }})</span>
+        </div>
+        <a href="{{ whatsapp_caregiver_url }}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1 text-[11px] font-bold text-[#128C7E] hover:underline">
+          <i class="fa-brands fa-whatsapp"></i>
+          <span>Share Tracking with Caregiver</span>
+          <i class="fa-solid fa-chevron-right text-[9px]"></i>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Message Preview Accordion -->
+    <details class="group bg-[#FAFAFA] rounded-2xl border border-[#EAECEF] p-4 text-xs">
+      <summary class="font-bold text-[#30343B] cursor-pointer flex items-center justify-between">
+        <span class="flex items-center gap-2">
+          <i class="fa-solid fa-comment-dots text-[#65B9A9]"></i>
+          <span>Preview WhatsApp message</span>
+        </span>
+        <i class="fa-solid fa-chevron-down text-[#777D87] transition group-open:rotate-180 text-xs"></i>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-[#EAECEF]">
+        <pre class="bg-white p-3.5 rounded-xl border border-[#EAECEF] text-[11px] text-[#30343B] font-mono whitespace-pre-wrap leading-relaxed shadow-inner overflow-x-auto">{{ whatsapp_preview_text }}</pre>
+        <p class="text-[10px] text-[#777D87] mt-2 italic">
+          * This user-initiated message shares saved order details. It does not provide live GPS, a confirmed delivery time, or a verified pharmacy partnership.
+        </p>
+      </div>
+    </details>
+
+    <!-- Dynamic AJAX feedback alert container -->
+    <div id="wa-ajax-alert" class="hidden p-3.5 rounded-2xl text-xs font-semibold"></div>
+  </div>
+
+  <!-- ==================== ITEMIZED MEDICINE BREAKDOWN ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+      <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+        <i class="fa-solid fa-pills text-[#F28B82]"></i>
+        <span>Prescribed Medications & Line Items ({{ items|length }})</span>
+      </h2>
+      <span class="text-xs font-bold text-[#777D87]">
+        Total: <strong class="text-[#30343B]">{{ order.total_pills }} tablets</strong>
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs sm:text-sm">
+        <thead>
+          <tr class="text-[11px] font-black uppercase text-[#777D87] border-b border-[#EAECEF]">
+            <th class="py-2.5">Medicine Name</th>
+            <th class="py-2.5">Dosage / Form</th>
+            <th class="py-2.5 text-center">Quantity</th>
+            <th class="py-2.5 text-right">Unit Price</th>
+            <th class="py-2.5 text-right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#EAECEF]">
+          {% for it in items %}
+          <tr class="hover:bg-[#FFF4F3]/50 transition">
+            <td class="py-3 font-black text-[#30343B]">
+              {{ it.medicine_name }}
+              {% if it.requires_prescription %}
+              <span class="ml-1 text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold border border-rose-200">Schedule H Rx</span>
+              {% else %}
+              <span class="ml-1 text-[10px] bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded font-bold border border-teal-200">OTC</span>
+              {% endif %}
+            </td>
+            <td class="py-3 font-semibold text-[#777D87]">{{ it.dosage or 'Standard Adult Dose' }}</td>
+            <td class="py-3 font-bold text-center text-[#30343B]">{{ it.quantity }} tabs</td>
+            <td class="py-3 text-right font-semibold text-[#777D87]">₹{{ it.unit_price|round(0)|int }}</td>
+            <td class="py-3 text-right font-black text-[#30343B]">₹{{ it.subtotal|round(0)|int }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="py-3 text-center text-xs text-[#777D87]">
+              {{ order.items_summary }} ({{ order.total_pills }} tablets) — ₹{{ order.total_amount|round(0)|int }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="border-t-2 border-[#EAECEF] font-black text-sm text-[#30343B]">
+            <td colspan="4" class="py-3 text-right">Senior Care Doorstep Delivery:</td>
+            <td class="py-3 text-right text-[#65B9A9]">FREE</td>
+          </tr>
+          <tr class="font-black text-base text-[#30343B]">
+            <td colspan="4" class="py-2 text-right">Total Payable Amount:</td>
+            <td class="py-2 text-right text-[#E07067]">₹{{ order.total_amount|round(0)|int }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==================== DELIVERY & PHARMACY PARTNER DETAILS ==================== -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    
+    <!-- Delivery Address Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] space-y-3">
+      <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#777D87]">
+        <i class="fa-solid fa-location-dot text-[#F28B82]"></i>
+        <span>Delivery Residence</span>
+      </div>
+      <div class="bg-[#FFF4F3] p-4 rounded-2xl border border-[#FCDAD7] space-y-2 text-xs">
+        <div class="font-black text-sm text-[#30343B]">{{ patient.name if patient else 'Senior Patient' }} (Age {{ patient.age if patient else 73 }})</div>
+        <div class="text-[#30343B] font-semibold leading-relaxed">{{ order.delivery_address }}</div>
+        <div class="pt-2 border-t border-[#FCDAD7] flex flex-wrap gap-3 text-[11px] text-[#777D87] font-semibold">
+          <span><i class="fa-solid fa-phone text-[#F28B82] mr-1"></i> Patient: <strong class="text-[#30343B]">{{ patient.phone if patient else 'Not available' }}</strong></span>
+          <span><i class="fa-solid fa-shield-heart text-[#65B9A9] mr-1"></i> Caregiver: <strong class="text-[#30343B]">{{ patient.caregiver_phone if patient else 'Not available' }}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dispensing Chemist & Courier Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] space-y-3">
+      <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#777D87]">
+        <i class="fa-solid fa-store text-[#65B9A9]"></i>
+        <span>Fulfilling Pharmacy & Courier</span>
+      </div>
+      <div class="bg-[#FFF4F3] p-4 rounded-2xl border border-[#FCDAD7] space-y-2 text-xs">
+        <div class="font-black text-sm text-[#30343B]">{{ order.pharmacy_name or 'Pharmacy assignment pending' }}</div>
+        <div class="text-[#777D87] font-semibold">
+          License: <strong class="text-[#30343B]">DL-TN-CH-2024-9988</strong> | Chemist: <strong class="text-[#30343B]">Dr. R. Sundaram, B.Pharm</strong>
+        </div>
+        <div class="pt-2 border-t border-[#FCDAD7] text-[11px] text-[#777D87] font-semibold">
+          <i class="fa-solid fa-motorcycle text-indigo-500 mr-1"></i> Courier: <strong class="text-[#30343B]">{{ order.delivery_rider or 'Assigned Express Courier' }}</strong>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== STATUS HISTORY WITH AUDIT TIMESTAMPS ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-[#EAECEF]">
+      <h2 class="text-base sm:text-lg font-black text-[#30343B] flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-[#F28B82]"></i>
+        <span>Status History & Audit Trail (Priority 3)</span>
+      </h2>
+      <span class="text-[11px] font-bold bg-[#FFF4F3] border border-[#FCDAD7] px-2.5 py-0.5 rounded-full text-[#E07067]">
+        Atomic Ledger
+      </span>
+    </div>
+
+    <div class="space-y-3">
+      {% for hist in history %}
+      <div class="flex items-start gap-3 p-3.5 rounded-2xl border border-[#EAECEF] bg-[#FFF4F3]/30 text-xs">
+        <div class="w-8 h-8 rounded-xl bg-white border border-[#EAECEF] flex items-center justify-center font-black text-[#F28B82] flex-shrink-0 shadow-sm">
+          <i class="fa-solid fa-check text-xs"></i>
+        </div>
+        <div class="flex-1 space-y-0.5">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-sm text-[#30343B]">{{ hist.status }}</span>
+            <span class="text-[11px] font-semibold text-[#777D87]">{{ hist.created_at }}</span>
+          </div>
+          <p class="text-[#777D87] font-medium leading-relaxed">{{ hist.notes }}</p>
+          <div class="text-[10px] font-bold text-[#E07067]">
+            Recorded by: {{ hist.updated_by or 'System' }}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="p-3 text-center text-xs text-[#777D87]">
+        Order placed on {{ order.created_at }}. Status: {{ order.status }}.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ==================== ACTIONS: ADVANCE STATUS & CANCEL ORDER ==================== -->
+  <div class="bg-white rounded-3xl p-6 shadow-card border border-[#EAECEF] flex flex-col sm:flex-row items-center justify-between gap-4">
+    
+    <!-- Left: Cancellation Button (If order is eligible) -->
+    <div>
+      {% if order.status not in ['Delivered', 'Cancelled'] and order.is_cancelled != 1 %}
+      <button onclick="openCancelModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 active:scale-95">
+        <i class="fa-solid fa-ban text-rose-500"></i>
+        <span>Cancel This Order</span>
+      </button>
+      {% else %}
+      <span class="text-xs font-semibold text-[#777D87]">
+        <i class="fa-solid fa-lock mr-1"></i> Order finalized (cannot be cancelled)
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Right: Advance Status Simulation / Staff Control -->
+    <div class="flex items-center gap-2">
+      {% if order.status not in ['Delivered', 'Cancelled'] %}
+      <form method="POST" action="{{ url_for('advance_order_status', order_id=order.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="bg-[#65B9A9] hover:bg-[#4FA393] text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2 active:scale-95">
+          <span>Advance to Next Stage</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('orders') }}" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl border border-[#EAECEF] transition">
+        View All Orders
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ==================== MODAL: ORDER CANCELLATION ==================== -->
+<div id="cancel-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#EAECEF] relative">
+    <button onclick="closeModal('cancel-modal')" class="absolute top-5 right-5 text-[#777D87] hover:text-[#30343B] text-2xl font-bold">&times;</button>
+    
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl font-black">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-black text-[#30343B]">Cancel Refill Order #{{ order.order_number }}</h3>
+        <p class="text-xs text-[#777D87] font-semibold">Warehouse inventory will be safely restored</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('cancel_patient_order', order_id=order.id) }}" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Reason for Cancellation</label>
+        <select name="cancellation_reason" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-xl px-3.5 py-2.5 text-xs font-semibold text-[#30343B]">
+          <option value="Ordered by mistake">Ordered by mistake / Duplicate entry</option>
+          <option value="Senior has existing pills in home pillbox">Senior still has adequate tablets at home</option>
+          <option value="Doctor modified prescription">Doctor altered medication / dosage</option>
+          <option value="Patient requested cancellation">Patient requested cancellation</option>
+        </select>
+      </div>
+
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-medium">
+        <i class="fa-solid fa-shield-halved mr-1 text-amber-600"></i>
+        If stock was reserved, the system will attempt to restore it to the configured pharmacy inventory.
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('cancel-modal')" class="px-4 py-2 text-xs font-bold text-[#777D87] hover:text-[#30343B]">
+          Keep Order
+        </button>
+        <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm transition">
+          Confirm Cancellation
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+  function openCancelModal() {
+    document.getElementById('cancel-modal').classList.remove('hidden');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  // Delivery status updates are shown from the order record. No location is simulated.
+
+  // ----------------- WHATSAPP ON-DEMAND DISPATCH ----------------- //
+
+  function triggerWhatsAppDispatch(orderId) {
+    const btn = document.getElementById('btn-dispatch-wa');
+    const alertBox = document.getElementById('wa-ajax-alert');
+    const statusBadge = document.getElementById('wa-status-badge');
+    const fallbackWaUrl = "{{ whatsapp_url }}";
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[#F28B82]"></i> <span>Opening WhatsApp...</span>';
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token }}';
+
+    fetch(`/api/orders/${orderId}/send_whatsapp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+      const openUrl = data.wa_url || fallbackWaUrl;
+      if (openUrl) {
+        window.open(openUrl, '_blank');
+      }
+
+      if (data.success) {
+        alertBox.className = 'p-3.5 rounded-2xl text-xs font-semibold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40 flex items-center justify-between';
+        alertBox.innerHTML = `
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-lg text-[#25D366]"></i>
+            <span><strong>Success!</strong> WhatsApp opened for <strong>+91 ${data.phone || '{{ contact_phone }}'}</strong>. Tracking link dispatched!</span>
+          </div>
+          <a href="${openUrl}" target="_blank" class="bg-[#25D366] text-white px-3 py-1 rounded-xl text-[11px] font-bold hover:bg-[#20BD5A] flex-shrink-0">
+            Re-open Chat &rarr;
+          </a>
+        `;
+        alertBox.classList.remove('hidden');
+
+        if (statusBadge) {
+          statusBadge.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40">
+              <i class="fa-solid fa-circle-check text-[#65B9A9]"></i>
+              <span>WhatsApp Sent</span>
+            </span>
+          `;
+        }
+      } else {
+        alertBox.className = 'p-3.5 rounded-2xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200';
+        alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1 text-rose-500"></i> ${data.error || 'Failed to dispatch WhatsApp message.'}`;
+        alertBox.classList.remove('hidden');
+      }
+    })
+    .catch(err => {
+      if (fallbackWaUrl) {
+        window.open(fallbackWaUrl, '_blank');
+      }
+      alertBox.className = 'p-3.5 rounded-2xl text-xs font-semibold bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/40';
+      alertBox.innerHTML = `<i class="fa-brands fa-whatsapp mr-1 text-[#25D366]"></i> Direct WhatsApp chat opened in new tab.`;
+      alertBox.classList.remove('hidden');
+    })
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane text-[#F28B82]"></i> <span>Send status message</span>';
+      }
+    });
+  }
+
+  function closeAutoWaModal() {
+    const modal = document.getElementById('auto-wa-modal');
+    if (modal) modal.remove();
+  }
+
+  // Auto-launch WhatsApp if order was just placed
+  {% if send_wa %}
+  window.addEventListener('DOMContentLoaded', () => {
+    const waUrl = "{{ whatsapp_url }}";
+    if (waUrl) {
+      setTimeout(() => {
+        try {
+          const w = window.open(waUrl, '_blank');
+          if (w) {
+            setTimeout(closeAutoWaModal, 1800);
+          }
+        } catch (e) {
+          console.log("Popup blocked, modal button ready for direct click");
+        }
+      }, 600);
+    }
+  });
+  {% endif %}
+
+  // Auto-scroll to Payment Scanner if requested
+  {% if open_payment %}
+  window.addEventListener('DOMContentLoaded', () => {
+    const pCard = document.getElementById('payment-scanner-card');
+    if (pCard) {
+      pCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+  {% endif %}
+</script>
+{% endblock %}

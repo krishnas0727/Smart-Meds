@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Caregiver registration — Smart Meds</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; background:#fff7f5; color:#30343b; }
+    body { margin:0; padding:24px 14px; }
+    main { max-width:480px; margin:5vh auto; background:white; border:1px solid #eadfdd; border-radius:22px; padding:26px; box-shadow:0 14px 40px #30343b12; }
+    h1 { margin:0 0 8px; font-size:1.5rem; } p { color:#626873; line-height:1.55; font-size:.92rem; }
+    label { display:block; font-weight:700; margin:16px 0 6px; font-size:.9rem; }
+    input { box-sizing:border-box; width:100%; padding:12px 13px; border:1px solid #d8dce1; border-radius:12px; font:inherit; }
+    button { margin-top:20px; width:100%; padding:13px; color:white; background:#e07067; border:0; border-radius:13px; font-weight:800; font-size:1rem; cursor:pointer; }
+    a { color:#b94f47; font-weight:700; }
+    .note { padding:12px; background:#f1f6ff; border-radius:12px; font-size:.84rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Caregiver registration</h1>
+    <p class="note">A patient must first generate an invitation from their signed-in profile. The invite expires after 24 hours and is valid only for the caregiver phone number saved on that profile.</p>
+    <form method="post" action="{{ url_for('register_caregiver') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="name">Your name</label>
+      <input id="name" name="name" maxlength="120" autocomplete="name" required>
+      <label for="phone">Caregiver phone number (10 digits)</label>
+      <input id="phone" name="phone" type="tel" inputmode="numeric" minlength="10" maxlength="20" autocomplete="tel" required>
+      <label for="invite_code">Patient invitation code</label>
+      <input id="invite_code" name="invite_code" autocomplete="off" required>
+      <label for="password">Password (6–128 characters)</label>
+      <input id="password" name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" required>
+      <button type="submit">Create caregiver account</button>
+    </form>
+    <p><a href="{{ url_for('signin') }}">Back to sign in</a></p>
+  </main>
+</body>
+</html>

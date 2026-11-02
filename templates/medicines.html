@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}A to Z Medicines Directory — ElderCare MedTrack{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- ==================== HEADER BANNER ==================== -->
+  <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-card border border-[#EAECEF] relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div>
+        <span class="inline-block bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full mb-2">
+          Verified Pharmaceutical Database
+        </span>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#30343B] tracking-tight font-display">
+          A to Z Medicines Directory
+        </h1>
+        <p class="text-[#777D87] text-sm sm:text-base font-medium mt-1 max-w-2xl">
+          Essential chronic disease medications for Diabetes, Hypertension, Cardiology, Arthritis, and Senior Geriatric Care.
+        </p>
+      </div>
+
+      <button onclick="openCustomMedModal()" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold px-5 py-3.5 rounded-2xl shadow-pastel flex items-center gap-2.5 transition active:scale-95 text-sm flex-shrink-0">
+        <i class="fa-solid fa-plus-circle text-lg"></i>
+        <span>+ Add Custom Medicine</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== SEARCH & CATEGORY FILTER BAR ==================== -->
+  <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF] space-y-4">
+    
+    <!-- Search Form -->
+    <form method="GET" action="{{ url_for('medicines_directory') }}" class="flex flex-col sm:flex-row gap-3">
+      <div class="relative flex-grow">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[#777D87] text-base"></i>
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search by brand name, generic salt, or condition (e.g. Metformin, BP, Heart, Joint)..."
+          class="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#EAECEF] bg-[#FFF4F3] focus:bg-white focus:outline-none focus:border-[#F28B82] text-sm sm:text-base font-semibold text-[#30343B] placeholder-[#777D87] transition shadow-sm">
+      </div>
+      <input type="hidden" name="letter" value="{{ selected_letter }}">
+      <input type="hidden" name="category" value="{{ selected_category }}">
+      
+      <button type="submit" class="bg-[#F28B82] hover:bg-[#E07067] text-white font-bold px-6 py-3 rounded-2xl transition shadow-pastel flex items-center justify-center gap-2 text-sm sm:text-base">
+        <span>Search</span>
+      </button>
+
+      {% if search_query or selected_letter != 'ALL' or selected_category != 'ALL' %}
+      <a href="{{ url_for('medicines_directory') }}" class="bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#777D87] font-bold px-4 py-3 rounded-2xl border border-[#EAECEF] transition flex items-center justify-center text-sm">
+        <i class="fa-solid fa-rotate-left mr-1.5"></i> Reset
+      </a>
+      {% endif %}
+    </form>
+
+    <!-- A to Z Alphabetical Selector Bar -->
+    <div>
+      <div class="text-[11px] font-black text-[#777D87] uppercase tracking-wider mb-2">Alphabetical Filter (A to Z):</div>
+      <div class="flex flex-wrap gap-1 sm:gap-1.5">
+        <a href="{{ url_for('medicines_directory', letter='ALL', category=selected_category, q=search_query) }}"
+           class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition {% if selected_letter == 'ALL' %}bg-[#F28B82] text-white shadow-sm{% else %}bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B]{% endif %}">
+          ALL
+        </a>
+        {% for char in alphabet %}
+        <a href="{{ url_for('medicines_directory', letter=char, category=selected_category, q=search_query) }}"
+           class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition {% if selected_letter == char %}bg-[#F28B82] text-white shadow-sm scale-105{% else %}bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B]{% endif %}">
+          {{ char }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Disease Category Chips -->
+    <div class="pt-3 border-t border-[#EAECEF] flex items-center gap-2 overflow-x-auto pb-1 text-sm">
+      <span class="text-[11px] font-black text-[#777D87] uppercase flex-shrink-0">Category:</span>
+      <a href="{{ url_for('medicines_directory', letter=selected_letter, category='ALL', q=search_query) }}"
+         class="px-3 py-1 rounded-full text-xs font-bold transition flex-shrink-0 {% if selected_category == 'ALL' %}bg-[#E07067] text-white{% else %}bg-[#FFF4F3] text-[#30343B] hover:bg-[#FDECEB] border border-[#EAECEF]{% endif %}">
+        All Categories
+      </a>
+      {% for cat in categories %}
+      <a href="{{ url_for('medicines_directory', letter=selected_letter, category=cat, q=search_query) }}"
+         class="px-3 py-1 rounded-full text-xs font-bold transition flex-shrink-0 {% if selected_category == cat %}bg-[#E07067] text-white{% else %}bg-[#FFF4F3] text-[#30343B] hover:bg-[#FDECEB] border border-[#EAECEF]{% endif %}">
+        {{ cat }}
+      </a>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- ==================== MEDICINES CATALOG GRID ==================== -->
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-black text-[#30343B]">
+        Available Medications <span class="text-[#F28B82]">({{ medicines|length }})</span>
+      </h2>
+      <span class="text-xs font-semibold text-[#777D87]">
+        Letter: <strong>{{ selected_letter }}</strong> | Category: <strong>{{ selected_category }}</strong>
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for m in medicines %}
+      {% set already_added = m.name in active_names %}
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-card border border-[#EAECEF] hover:border-[#FCDAD7] hover:shadow-card-hover transition flex flex-col justify-between">
+        <div>
+          <!-- Top Badge Bar -->
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <span class="inline-flex items-center gap-1 bg-[#FFF4F3] border border-[#FCDAD7] text-[#E07067] text-xs font-bold px-2.5 py-0.5 rounded-lg">
+              <i class="fa-solid fa-tag text-[10px]"></i> {{ m.category }}
+            </span>
+            <span class="w-7 h-7 rounded-xl bg-[#30343B] text-white font-black text-xs flex items-center justify-center">
+              {{ m.letter }}
+            </span>
+          </div>
+
+          <!-- Medicine Name & Generic Salt -->
+          <h3 class="text-lg font-black text-[#30343B] leading-snug">{{ m.name }}</h3>
+          <p class="text-xs font-bold text-[#777D87] mt-0.5">{{ m.generic_name }}</p>
+
+          <!-- Therapeutic Benefit Badge -->
+          {% if m.therapeutic_use %}
+          <div class="bg-[#EBF6F4] text-[#3D8577] border border-[#65B9A9]/30 font-bold text-xs p-2.5 rounded-xl mt-3">
+            <i class="fa-solid fa-heart-pulse text-[#65B9A9] mr-1"></i>
+            {{ m.therapeutic_use }}
+          </div>
+          {% endif %}
+
+          <!-- Description & Dosage Advice -->
+          <p class="text-[#777D87] text-xs mt-2.5 leading-relaxed">{{ m.description }}</p>
+
+          <div class="mt-3 pt-3 border-t border-[#EAECEF] flex flex-wrap gap-2 text-xs font-semibold text-[#777D87]">
+            <span class="bg-[#FFF4F3] px-2 py-0.5 rounded text-[#30343B] font-bold border border-[#EAECEF]"><i class="fa-solid fa-prescription-bottle mr-1 text-[#F28B82]"></i>{{ m.form }}</span>
+            <span class="bg-[#FFF4F3] px-2 py-0.5 rounded text-[#30343B] font-bold border border-[#EAECEF]"><i class="fa-solid fa-weight-scale mr-1 text-amber-500"></i>{{ m.default_dosage }}</span>
+            <span class="bg-[#FFF4F3] text-[#E07067] px-2 py-0.5 rounded font-bold border border-[#FCDAD7]"><i class="fa-solid fa-utensils mr-1"></i>{{ m.timing_advice }}</span>
+          </div>
+
+          {% if m.precautions %}
+          <div class="mt-2 text-[11px] text-rose-700 bg-rose-50 p-2 rounded-xl font-medium border border-rose-100">
+            <i class="fa-solid fa-circle-exclamation mr-1"></i>Precaution: {{ m.precautions }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Action Buttons: Order Refill & Add to Schedule (Priority 1) -->
+        <div class="mt-5 pt-3.5 border-t border-[#EAECEF] flex items-center gap-2">
+          <!-- 1. Order Medicine Directly -->
+          <button type="button" onclick="openOrderMedModal('{{ m.id }}', '{{ m.name|escape }}', '{{ m.generic_name|escape }}', '{{ m.form }}', '{{ m.default_dosage }}', {{ m.price or 110.0 }}, {{ m.pharmacy_stock or 0 }}, {{ 1 if m.requires_prescription else 0 }})"
+            class="flex-1 bg-[#F28B82] hover:bg-[#E07067] active:scale-95 text-white font-black text-xs py-2.5 px-2 rounded-xl transition shadow-pastel flex items-center justify-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-cart-shopping text-xs"></i>
+            <span>Order Refill</span>
+          </button>
+
+          <!-- 2. Add to Daily Schedule -->
+          {% if already_added %}
+          <div class="flex-1 py-2.5 rounded-xl bg-[#EBF6F4] text-[#3D8577] font-bold text-[11px] text-center border border-[#65B9A9]/30 flex items-center justify-center">
+            <i class="fa-solid fa-circle-check mr-1 text-[#65B9A9]"></i> In Schedule
+          </div>
+          {% else %}
+          <button type="button" onclick="openAddToScheduleModal('{{ m.name|escape }}', '{{ m.default_dosage }}', '{{ m.timing_advice }}')"
+            class="flex-1 bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] font-bold text-xs py-2.5 px-2 rounded-xl border border-[#EAECEF] transition flex items-center justify-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-calendar-plus text-[#F28B82]"></i>
+            <span>+ Schedule</span>
+          </button>
+          {% endif %}
+        </div>
+
+      </div>
+      {% else %}
+      <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-[#EAECEF] p-8 shadow-card">
+        <div class="w-14 h-14 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center mx-auto text-2xl mb-3">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <h3 class="text-lg font-black text-[#30343B]">No medicines found</h3>
+        <p class="text-[#777D87] text-sm mt-1">Try another keyword or add a custom medication from your doctor's prescription.</p>
+        <button onclick="openCustomMedModal()" class="mt-4 bg-[#F28B82] hover:bg-[#E07067] text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-pastel">
+          + Add Custom Medicine Now
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== MODAL: ADD TO SCHEDULE ==================== -->
+<div id="add-schedule-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#EAECEF] relative animate-scale-up">
+    <button onclick="closeModal('add-schedule-modal')" aria-label="Close modal" class="absolute top-5 right-5 text-[#777D87] hover:text-[#30343B] text-2xl font-bold">&times;</button>
+    
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 rounded-2xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center text-xl font-bold">
+        <i class="fa-solid fa-pills"></i>
+      </div>
+      <div>
+        <h3 class="text-xl font-black text-[#30343B]">Add to Daily Schedule</h3>
+        <p class="text-xs text-[#777D87] font-semibold">Set daily dosage, time slot, and refill alert limit</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('add_prescription') }}" class="space-y-3.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Medicine Name</label>
+        <input type="text" id="modal-med-name" name="medicine_name" readonly class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-xl px-3.5 py-2.5 font-black text-[#30343B] text-sm">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Dosage</label>
+          <input type="text" id="modal-dosage" name="dosage" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Schedule Slot</label>
+          <select name="timing" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+            <option value="Morning">Morning (காலை)</option>
+            <option value="Afternoon">Afternoon (மதியம்)</option>
+            <option value="Evening">Evening (மாலை)</option>
+            <option value="Night">Night (இரவு)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Meal Timing Advice</label>
+        <select id="modal-timing-advice" name="timing_advice" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+          <option value="After Food">After Food (உணவுக்குப் பின்)</option>
+          <option value="Before Food">Before Food (உணவுக்கு முன்)</option>
+          <option value="With Full Glass of Water">With Water (தண்ணீருடன்)</option>
+          <option value="Before Bed">Before Bed (தூங்குவதற்கு முன்)</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Starting Stock (Tabs)</label>
+          <input type="number" name="stock_remaining" value="30" min="1" max="300" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Alert Below (Tabs)</label>
+          <input type="number" name="refill_threshold" value="5" min="1" max="50" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Doctor's Clinical Notes</label>
+        <input type="text" name="doctor_notes" placeholder="e.g. Prescribed for hypertension control" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs text-[#30343B] bg-white">
+      </div>
+
+      <!-- Time-based Telephony Reminders (SMS & Voice) -->
+      <div class="bg-[#FFF4F3] border border-[#FCDAD7] rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between text-xs font-black text-[#30343B]">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-clock text-[#F28B82]"></i> Reminder Time & Channels</span>
+          <span class="text-[10px] font-bold text-[#777D87] bg-white px-1.5 py-0.5 rounded border border-[#EAECEF]">Asia/Kolkata</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-[#777D87] mb-0.5">Exact Time (HH:MM)</label>
+            <input type="time" name="schedule_time" value="08:00" required class="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-[#EAECEF] bg-white text-[#30343B]">
+          </div>
+          <div class="flex flex-col justify-end gap-1">
+            <label class="flex items-center gap-1.5 text-[11px] font-bold text-[#30343B] cursor-pointer">
+              <input type="checkbox" name="sms_reminder_enabled" value="1" class="w-3.5 h-3.5 text-[#F28B82] rounded">
+              <span>SMS Alert</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-[11px] font-bold text-[#30343B] cursor-pointer">
+              <input type="checkbox" name="voice_reminder_enabled" value="1" class="w-3.5 h-3.5 text-[#F28B82] rounded">
+              <span>Voice Call</span>
+            </label>
+          </div>
+        </div>
+        <label class="flex items-start gap-2 text-[10px] font-semibold text-[#555B65]">
+          <input type="checkbox" name="reminder_consent" value="1" class="mt-0.5 w-3.5 h-3.5 rounded">
+          <span>I consent to automated medication reminders via selected channels. I can revoke consent in my profile.</span>
+        </label>
+      </div>
+
+      <div class="pt-2 flex gap-3">
+        <button type="button" onclick="closeModal('add-schedule-modal')" class="w-1/2 py-2.5 rounded-xl border border-[#EAECEF] font-bold text-[#777D87] hover:bg-[#FFF4F3] transition text-xs">
+          Cancel
+        </button>
+        <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold transition shadow-pastel text-xs">
+          Save to Schedule
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODAL: ADD CUSTOM MEDICINE ==================== -->
+<div id="add-custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#EAECEF] relative animate-scale-up">
+    <button onclick="closeModal('add-custom-modal')" aria-label="Close modal" class="absolute top-5 right-5 text-[#777D87] hover:text-[#30343B] text-2xl font-bold">&times;</button>
+    
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 rounded-2xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center text-xl font-bold">
+        <i class="fa-solid fa-file-medical"></i>
+      </div>
+      <div>
+        <h3 class="text-xl font-black text-[#30343B]">Add Custom Medicine</h3>
+        <p class="text-xs text-[#777D87] font-semibold">Enter custom medicine details from your prescription</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('add_prescription') }}" class="space-y-3.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Brand or Medicine Name <span class="text-rose-500">*</span></label>
+        <input type="text" name="medicine_name" placeholder="e.g. Glycomet GP1, Shelcal, Ecosprin..." required class="w-full border border-[#EAECEF] rounded-xl px-3.5 py-2.5 font-bold text-[#30343B] text-sm bg-white">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Dosage</label>
+          <input type="text" name="dosage" placeholder="e.g. 500mg, 1 Tab" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Schedule Slot</label>
+          <select name="timing" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+            <option value="Morning">Morning (காலை)</option>
+            <option value="Afternoon">Afternoon (மதியம்)</option>
+            <option value="Evening">Evening (மாலை)</option>
+            <option value="Night">Night (இரவு)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Meal Timing Advice</label>
+        <select name="timing_advice" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+          <option value="After Food">After Food (உணவுக்குப் பின்)</option>
+          <option value="Before Food">Before Food (உணவுக்கு முன்)</option>
+          <option value="With Full Glass of Water">With Water (தண்ணீருடன்)</option>
+          <option value="Before Bed">Before Bed (தூங்குவதற்கு முன்)</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Initial Stock (Tabs)</label>
+          <input type="number" name="stock_remaining" value="30" min="1" max="300" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-[#30343B] mb-1">Alert Below (Tabs)</label>
+          <input type="number" name="refill_threshold" value="5" min="1" max="50" required class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs font-bold text-[#30343B] bg-white">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Doctor Prescription Notes</label>
+        <input type="text" name="doctor_notes" placeholder="e.g. Recommended by Geriatric Specialist" class="w-full border border-[#EAECEF] rounded-xl px-3 py-2 text-xs text-[#30343B] bg-white">
+      </div>
+
+      <!-- Time-based Telephony Reminders (SMS & Voice) -->
+      <div class="bg-[#FFF4F3] border border-[#FCDAD7] rounded-2xl p-3 space-y-2">
+        <div class="flex items-center justify-between text-xs font-black text-[#30343B]">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-clock text-[#F28B82]"></i> Reminder Time & Channels</span>
+          <span class="text-[10px] font-bold text-[#777D87] bg-white px-1.5 py-0.5 rounded border border-[#EAECEF]">Asia/Kolkata</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-[#777D87] mb-0.5">Exact Time (HH:MM)</label>
+            <input type="time" name="schedule_time" value="08:00" required class="w-full px-2.5 py-1 text-xs font-semibold rounded-lg border border-[#EAECEF] bg-white text-[#30343B]">
+          </div>
+          <div class="flex flex-col justify-end gap-1">
+            <label class="flex items-center gap-1.5 text-[11px] font-bold text-[#30343B] cursor-pointer">
+              <input type="checkbox" name="sms_reminder_enabled" value="1" class="w-3.5 h-3.5 text-[#F28B82] rounded">
+              <span>SMS Alert</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-[11px] font-bold text-[#30343B] cursor-pointer">
+              <input type="checkbox" name="voice_reminder_enabled" value="1" class="w-3.5 h-3.5 text-[#F28B82] rounded">
+              <span>Voice Call</span>
+            </label>
+          </div>
+        </div>
+        <label class="flex items-start gap-2 text-[10px] font-semibold text-[#555B65]">
+          <input type="checkbox" name="reminder_consent" value="1" class="mt-0.5 w-3.5 h-3.5 rounded">
+          <span>I consent to automated medication reminders via selected channels. I can revoke consent in my profile.</span>
+        </label>
+      </div>
+
+      <div class="pt-2 flex gap-3">
+        <button type="button" onclick="closeModal('add-custom-modal')" class="w-1/2 py-2.5 rounded-xl border border-[#EAECEF] font-bold text-[#777D87] hover:bg-[#FFF4F3] transition text-xs">
+          Cancel
+        </button>
+        <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-[#F28B82] hover:bg-[#E07067] text-white font-extrabold transition shadow-pastel text-xs">
+          Add Medicine Now
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODAL: DIRECT MEDICINE ORDER (Priority 1) ==================== -->
+<div id="order-med-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#EAECEF] relative animate-scale-up max-h-[90vh] overflow-y-auto">
+    <button type="button" onclick="closeModal('order-med-modal')" aria-label="Close modal" class="absolute top-5 right-5 text-[#777D87] hover:text-[#30343B] text-2xl font-bold">&times;</button>
+    
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-11 h-11 rounded-2xl bg-[#FFF4F3] text-[#F28B82] flex items-center justify-center text-xl font-bold">
+        <i class="fa-solid fa-truck-medical"></i>
+      </div>
+      <div>
+        <h3 class="text-xl font-black text-[#30343B]">Doorstep Refill Order</h3>
+        <p class="text-xs text-[#777D87] font-semibold">Senior doorstep delivery with Cash on Delivery</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('place_order') }}" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" id="order-med-id" name="medicine_id">
+      <input type="hidden" id="order-base-price" value="110.0">
+      <input type="hidden" id="order-idempotency-token" name="idempotency_key">
+      <input type="hidden" name="patient_id" value="{{ patient.id if patient else 1 }}">
+
+      <!-- Selected Medicine Details -->
+      <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] space-y-2">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div id="order-med-name-display" class="font-black text-base text-[#30343B]">Medicine Name</div>
+            <div id="order-generic-display" class="text-xs text-[#777D87] font-semibold">Generic Salt</div>
+          </div>
+          <span id="order-stock-badge" class="text-xs font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+            In Stock
+          </span>
+        </div>
+        <div class="pt-2 border-t border-[#FCDAD7] flex items-center justify-between text-xs font-bold">
+          <span class="text-[#777D87]">Price per 30 tablets:</span>
+          <span id="order-unit-price" class="text-[#30343B] font-black">₹110 / 30 tablets</span>
+        </div>
+      </div>
+
+      <!-- Schedule H Prescription Notice -->
+      <div id="order-rx-notice" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-medium flex items-center gap-2">
+        <i class="fa-solid fa-prescription text-amber-600 flex-shrink-0"></i>
+        <span>Prescription-required items need staff verification before processing. Pharmacy partners and verification are not configured by default.</span>
+      </div>
+
+      <!-- Step 1: Quantity Selection -->
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Select Supply Quantity <span class="text-rose-500">*</span></label>
+        <select id="order-quantity-select" name="quantity" onchange="updateOrderModalPricing()" class="w-full bg-[#FFF4F3] border border-[#EAECEF] rounded-xl px-3.5 py-2.5 text-xs font-black text-[#30343B] focus:bg-white focus:outline-none focus:border-[#F28B82]">
+          <option value="15">15 Tablets (Half Month Supply)</option>
+          <option value="30" selected>30 Tablets (1 Month Standard Supply)</option>
+          <option value="60">60 Tablets (2 Months Supply)</option>
+          <option value="90">90 Tablets (3 Months Chronic Supply)</option>
+        </select>
+      </div>
+
+      <!-- Step 2: Delivery Residence Address -->
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Residence Delivery Address <span class="text-rose-500">*</span></label>
+        <textarea name="delivery_address" rows="2" required class="w-full bg-white border border-[#EAECEF] rounded-xl p-3 text-xs font-semibold text-[#30343B] focus:border-[#F28B82] focus:outline-none">{{ patient.address if patient else '' }}</textarea>
+      </div>
+
+      <!-- Step 3: Contact Phone -->
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1 flex items-center justify-between">
+          <span>Recipient WhatsApp Contact Phone <span class="text-rose-500">*</span></span>
+          <span class="text-[10px] font-bold text-[#128C7E] flex items-center gap-1"><i class="fa-brands fa-whatsapp text-xs text-[#25D366]"></i> Live WhatsApp Tracking</span>
+        </label>
+        <input type="text" name="contact_phone" value="{{ patient.phone if patient else '' }}" required class="w-full bg-white border border-[#EAECEF] rounded-xl px-3.5 py-2 text-xs font-bold text-[#30343B] focus:border-[#F28B82] focus:outline-none">
+        <p class="text-[10px] text-[#777D87] mt-1"><i class="fa-brands fa-whatsapp text-[#25D366] mr-1"></i> SMS status notices are sent only with patient consent and configured provider credentials. WhatsApp sharing is initiated separately from the order page.</p>
+      </div>
+
+      <!-- Step 4: Payment Mode -->
+      <div>
+        <label class="block text-xs font-bold text-[#30343B] mb-1">Payment Method</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <label class="p-3 rounded-xl border-2 border-[#F28B82] bg-[#FFF4F3] flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="payment_method" value="Cash on Delivery (Doorstep)" checked class="text-[#F28B82] focus:ring-[#F28B82]">
+            <span class="font-bold text-[#30343B]">Cash on Delivery</span>
+          </label>
+          <label class="p-3 rounded-xl border border-[#EAECEF] bg-white flex items-center gap-2 cursor-pointer hover:bg-[#FFF4F3]">
+            <input type="radio" name="payment_method" value="UPI / QR Code on Delivery" class="text-[#F28B82] focus:ring-[#F28B82]">
+            <span class="font-bold text-[#30343B]">UPI on Delivery</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Order Summary Card -->
+      <div class="p-4 rounded-2xl bg-slate-50 border border-[#EAECEF] space-y-1.5 text-xs">
+        <div class="flex justify-between text-[#777D87] font-semibold">
+          <span>Supply Quantity:</span>
+          <span id="order-summary-qty" class="text-[#30343B] font-bold">30 tablets (1 Month Supply)</span>
+        </div>
+        <div class="flex justify-between text-[#777D87] font-semibold">
+          <span>Doorstep Delivery:</span>
+          <span class="text-[#65B9A9] font-black">FREE (Senior Care)</span>
+        </div>
+        <div class="pt-2 border-t border-[#EAECEF] flex justify-between items-center text-sm font-black text-[#30343B]">
+          <span>Total Amount to Pay:</span>
+          <span id="order-total-display" class="text-xl text-[#E07067]">₹110</span>
+        </div>
+      </div>
+
+      <!-- Submit Action -->
+      <div class="pt-2 flex gap-3">
+        <button type="button" onclick="closeModal('order-med-modal')" class="w-1/3 py-3 rounded-xl border border-[#EAECEF] font-bold text-[#777D87] hover:bg-[#FFF4F3] transition text-xs">
+          Cancel
+        </button>
+        <button type="submit" id="btn-submit-order" class="w-2/3 py-3 rounded-xl bg-[#F28B82] hover:bg-[#E07067] text-white font-black transition shadow-pastel text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-truck-fast"></i>
+          <span>Confirm & Place Order</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

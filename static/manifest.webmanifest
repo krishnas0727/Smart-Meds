@@ -1,0 +1,25 @@
+{
+  "name": "Smart Meds — ElderCare MedTrack",
+  "short_name": "Smart Meds",
+  "description": "Medication schedule and order-status support",
+  "start_url": "/signin",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fffaf9",
+  "theme_color": "#F28B82",
+  "icons": [
+    {
+      "src": "/static/icons/smart-meds-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/smart-meds-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
