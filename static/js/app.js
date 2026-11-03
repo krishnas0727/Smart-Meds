@@ -446,6 +446,7 @@ const I18N = {
 
     // Header & Accessibility
     "header_voice_summary": "Voice Summary",
+    "header_alerts": "Alerts",
     "header_sos": "SOS",
     "header_tagline": "Safe Senior Medicine Management & Doorstep Refill",
     "header_caregiver_label": "Caregiver:",
@@ -517,6 +518,7 @@ const I18N = {
 
     // Header & Accessibility
     "header_voice_summary": "குரல் வழி வாசிப்பு",
+    "header_alerts": "நினைவூட்டல்",
     "header_sos": "அவசரம்",
     "header_tagline": "முதியோர்களுக்கான பாதுகாப்பான மாத்திரை மேலாண்மை & வீட்டு விநியோகம்",
     "header_caregiver_label": "பராமரிப்பாளர்:",
@@ -695,4 +697,329 @@ document.addEventListener("DOMContentLoaded", () => {
       window.speechSynthesis.getVoices();
     };
   }
+
+  // Initialize Free In-App & Browser Notifications
+  initSmartMedsFreeNotifications();
 });
+
+// ==================== 9. FREE LOCAL NOTIFICATIONS & TAMIL TTS ALERTS ==================== //
+let _snoozedReminders = {};
+let _lastAlertedReminders = {};
+let _activeReminderModalData = null;
+
+// Pleasant 4-tone chime for pill reminders (Web Audio API synthesis - zero external files)
+function playReminderChime() {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.16);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + idx * 0.16 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.45);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + idx * 0.16);
+      osc.stop(now + idx * 0.16 + 0.46);
+    });
+  } catch (e) {
+    console.log("Reminder chime error:", e);
+  }
+}
+
+// Request or toggle Browser Push Notification permission
+async function toggleNotificationPermission() {
+  if (!('Notification' in window)) {
+    showToast("Browser does not support notifications.");
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    showToast(getCurrentLanguage() === 'ta' ? "நினைவூட்டல் ஏற்கனவே இயக்கப்பட்டுள்ளது!" : "Reminders already enabled!");
+    updateNotificationBellIcon('granted');
+    testMedicineReminder();
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    updateNotificationBellIcon(permission);
+    if (permission === 'granted') {
+      showBrowserNotification(
+        "Smart Meds — Notifications Active!",
+        getCurrentLanguage() === 'ta' ? "மாத்திரை நினைவூட்டல்கள் வெற்றிகரமாக இணைக்கப்பட்டன!" : "Pill reminders and low-stock alerts are now active!",
+        "welcome-notif"
+      );
+      showToast(getCurrentLanguage() === 'ta' ? "அறிவிப்புகள் இயக்கப்பட்டன!" : "Notifications Enabled!");
+    } else {
+      showToast(getCurrentLanguage() === 'ta' ? "அறிவிப்பு அனுமதி மறுக்கப்பட்டது." : "Notification permission denied.");
+    }
+  } catch (err) {
+    console.error("Permission request failed", err);
+  }
+}
+
+function updateNotificationBellIcon(perm) {
+  const bell = document.getElementById("notif-bell-icon");
+  const dot = document.getElementById("notif-badge-dot");
+  if (!bell) return;
+
+  const status = perm || (('Notification' in window) ? Notification.permission : 'denied');
+  if (status === 'granted') {
+    bell.className = "fa-solid fa-bell text-[#65B9A9]";
+    if (dot) dot.classList.remove("hidden");
+  } else {
+    bell.className = "fa-solid fa-bell text-[#F28B82]";
+    if (dot) dot.classList.add("hidden");
+  }
+}
+
+// Show native OS / Browser Notification
+function showBrowserNotification(title, body, tag = 'smart-meds', url = '/') {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const options = {
+    body: body,
+    icon: '/static/icons/smart-meds-192.png',
+    badge: '/static/icons/smart-meds-192.png',
+    tag: tag,
+    renotify: true,
+    data: { url: url }
+  };
+
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then(reg => {
+      reg.showNotification(title, options);
+    }).catch(() => {
+      new Notification(title, options);
+    });
+  } else {
+    try {
+      const notif = new Notification(title, options);
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
+    } catch (e) {
+      console.log("Direct notification failed:", e);
+    }
+  }
+}
+
+// Senior-Friendly Tamil & English Text-to-Speech
+function speakTamilMedicineReminder(tamilText, englishText) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+
+  const currentLang = getCurrentLanguage();
+  const isTamil = currentLang === 'ta';
+  const textToSpeak = isTamil ? tamilText : englishText;
+
+  const utterance = new SpeechSynthesisUtterance(textToSpeak);
+  utterance.rate = 0.85; // Clear, relaxed pacing for elderly seniors
+  utterance.pitch = 1.0;
+
+  const voices = window.speechSynthesis.getVoices();
+  let voice = null;
+  if (isTamil) {
+    utterance.lang = 'ta-IN';
+    voice = voices.find(v => v.lang.startsWith('ta')) ||
+            voices.find(v => v.name.includes('Tamil') || v.name.includes('ta-IN')) ||
+            voices.find(v => v.lang.includes('IN'));
+  } else {
+    utterance.lang = 'en-IN';
+    voice = voices.find(v => v.lang.includes('IN') || v.lang.startsWith('en'));
+  }
+
+  if (voice) utterance.voice = voice;
+  window.speechSynthesis.speak(utterance);
+}
+
+// Display Senior-friendly In-App Medicine Alert Modal
+function showInAppMedicineAlert(reminder) {
+  _activeReminderModalData = reminder;
+  const modal = document.getElementById("in-app-reminder-modal");
+  if (!modal) return;
+
+  // Sound chime
+  playReminderChime();
+
+  // Populate fields
+  const medNameEl = document.getElementById("reminder-modal-med-name");
+  const medDosageEl = document.getElementById("reminder-modal-dosage");
+  const medTimingEl = document.getElementById("reminder-modal-timing");
+  const medAdviceEl = document.getElementById("reminder-modal-advice");
+  const medTimeEl = document.getElementById("reminder-modal-time");
+
+  if (medNameEl) medNameEl.innerText = reminder.medicine_name;
+  if (medDosageEl) medDosageEl.innerText = reminder.dosage;
+  if (medTimingEl) medTimingEl.innerText = reminder.timing;
+  if (medAdviceEl) medAdviceEl.innerText = reminder.timing_advice;
+  if (medTimeEl) medTimeEl.innerText = reminder.schedule_time;
+
+  modal.classList.remove("hidden");
+
+  // Tamil Voice Readout
+  speakTamilMedicineReminder(reminder.msg_ta, reminder.msg_en);
+
+  // Native Browser Notification
+  const isTa = getCurrentLanguage() === 'ta';
+  showBrowserNotification(
+    isTa ? `மருந்து நேரம்: ${reminder.medicine_name}` : `Medicine Reminder: ${reminder.medicine_name}`,
+    isTa ? reminder.msg_ta : reminder.msg_en,
+    `pill-reminder-${reminder.id}`,
+    '/'
+  );
+}
+
+function repeatReminderVoice() {
+  if (_activeReminderModalData) {
+    speakTamilMedicineReminder(_activeReminderModalData.msg_ta, _activeReminderModalData.msg_en);
+  }
+}
+
+function closeInAppReminderModal() {
+  const modal = document.getElementById("in-app-reminder-modal");
+  if (modal) modal.classList.add("hidden");
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
+// Action: Take Dose from within the Reminder Modal
+function takeDoseFromReminder() {
+  if (!_activeReminderModalData) return;
+  const rxId = _activeReminderModalData.id;
+  const isTa = getCurrentLanguage() === 'ta';
+
+  const btn = document.getElementById("btn-modal-take-dose");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>${isTa ? 'பதிவாகிறது...' : 'Recording...'}</span>`;
+  }
+
+  fetch(`/api/take_dose/${rxId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(res => res.json())
+  .then(data => {
+    closeInAppReminderModal();
+    playSuccessChime();
+
+    const confirmMsg = isTa
+      ? "மாத்திரை உட்கொள்ளப்பட்டது வெற்றிகரமாகப் பதிவானது!"
+      : "Dose recorded successfully! Good job taking your medicine on time.";
+    showToast(confirmMsg);
+    speakTamilMedicineReminder(confirmMsg, confirmMsg);
+
+    // Update any matching button on dashboard
+    const pageBtn = document.getElementById(`btn-dose-${rxId}`);
+    if (pageBtn) {
+      pageBtn.className = "px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 bg-[#65B9A9] text-white cursor-default shadow-sm";
+      pageBtn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${isTa ? 'எடுக்கப்பட்டது' : 'Taken'}</span>`;
+    }
+  })
+  .catch(err => {
+    console.error("Take dose failed:", err);
+    closeInAppReminderModal();
+  });
+}
+
+// Action: Snooze Reminder for 10 Minutes
+function snoozeActiveReminder() {
+  if (!_activeReminderModalData) return;
+  const rxId = _activeReminderModalData.id;
+  _snoozedReminders[rxId] = Date.now() + 10 * 60 * 1000; // 10 minutes
+  closeInAppReminderModal();
+
+  const isTa = getCurrentLanguage() === 'ta';
+  const snoozeMsg = isTa ? "10 நிமிடங்களுக்கு நினைவூட்டல் ஒத்திவைக்கப்பட்டது." : "Reminder snoozed for 10 minutes.";
+  showToast(snoozeMsg);
+}
+
+// Low Stock Alert Toast Handler
+function displayLowStockToast(item) {
+  const toast = document.getElementById("low-stock-alert-card");
+  const msgEl = document.getElementById("low-stock-alert-msg");
+  if (!toast || !msgEl) return;
+
+  const isTa = getCurrentLanguage() === 'ta';
+  msgEl.innerText = isTa ? item.msg_ta : item.msg_en;
+  toast.classList.remove("hidden");
+
+  // Show browser notification for low stock (once per session)
+  const sessionKey = `low_stock_notif_${item.id}_${item.stock_remaining}`;
+  if (!sessionStorage.getItem(sessionKey)) {
+    sessionStorage.setItem(sessionKey, '1');
+    showBrowserNotification(
+      isTa ? "குறைந்த இருப்பு எச்சரிக்கை!" : "Low Stock Alert!",
+      isTa ? item.msg_ta : item.msg_en,
+      `low-stock-${item.id}`,
+      '/refill'
+    );
+  }
+}
+
+function closeLowStockToast() {
+  const toast = document.getElementById("low-stock-alert-card");
+  if (toast) toast.classList.add("hidden");
+}
+
+// Free Real-time Polling Engine (Every 15s)
+function pollActiveAlerts(force = false) {
+  fetch(`/api/notifications/active_alerts${force ? '?force=1' : ''}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.is_authenticated) return;
+
+      const now = Date.now();
+
+      // Check due reminders
+      if (data.reminders && data.reminders.length > 0) {
+        for (const rem of data.reminders) {
+          const snoozedUntil = _snoozedReminders[rem.id] || 0;
+          if (now < snoozedUntil) continue; // Still in snooze
+
+          const lastAlert = _lastAlertedReminders[rem.id] || 0;
+          // Trigger if forced or if not shown in last 15 minutes
+          if (force || (now - lastAlert > 15 * 60 * 1000)) {
+            _lastAlertedReminders[rem.id] = now;
+            showInAppMedicineAlert(rem);
+            break; // Show one modal at a time
+          }
+        }
+      }
+
+      // Check low stock
+      if (data.low_stock && data.low_stock.length > 0) {
+        displayLowStockToast(data.low_stock[0]);
+      }
+    })
+    .catch(err => {
+      // Graceful offline/silent catch
+    });
+}
+
+// Manual Test Trigger (Works instantly for demonstration)
+function testMedicineReminder() {
+  pollActiveAlerts(true);
+}
+
+function initSmartMedsFreeNotifications() {
+  updateNotificationBellIcon();
+
+  // Initial check after 2 seconds
+  setTimeout(() => pollActiveAlerts(false), 2000);
+
+  // Periodic polling every 20 seconds
+  setInterval(() => pollActiveAlerts(false), 20000);
+}

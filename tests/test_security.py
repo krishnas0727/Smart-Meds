@@ -167,6 +167,41 @@ class SecurityRegressionTests(unittest.TestCase):
             sess["user_role"] = "UNRECOGNIZED"
         self.assertEqual(self.client.get("/pharmacy").status_code, 403)
 
+    def test_patient_cannot_access_staff_portals_or_reminder_controls(self):
+        self.register_patient(phone="5550001007")
+        token = self.csrf()
+        self.assertEqual(self.client.get("/pharmacy").status_code, 403)
+        self.assertEqual(self.client.get("/admin/reminders").status_code, 403)
+        self.assertEqual(
+            self.client.post(
+                "/admin/reminders/trigger_check",
+                data={"csrf_token": token},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/admin/reminders/test_call",
+                data={"csrf_token": token, "phone": "5550001007"},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/admin/reminders/test_sms",
+                data={"csrf_token": token, "phone": "5550001007"},
+            ).status_code,
+            403,
+        )
+
+    def test_active_alerts_endpoint_requires_patient_access(self):
+        self.assertEqual(self.client.get("/api/notifications/active_alerts").status_code, 302)
+
+        self.register_patient(phone="5550001008")
+        response = self.client.get("/api/notifications/active_alerts")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["is_authenticated"])
+
     def test_pwa_service_worker_is_public_and_root_scoped(self):
         response = self.client.get("/service-worker.js")
         self.assertEqual(response.status_code, 200)

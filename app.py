@@ -138,6 +138,7 @@ def require_login():
         "log_vital": {"PATIENT", "CAREGIVER", "ADMIN"},
         "delete_vital": {"PATIENT", "CAREGIVER", "ADMIN"},
         "api_vitals_chart_data": {"PATIENT", "CAREGIVER", "ADMIN"},
+        "api_active_alerts": {"PATIENT", "CAREGIVER"},
         "admin_reminders": {"ADMIN", "PHARMACY"},
         "admin_trigger_check": {"ADMIN", "PHARMACY"},
         "admin_test_call": {"ADMIN", "PHARMACY"},
@@ -629,8 +630,8 @@ def index():
 
     # Fetch active prescriptions
     prescriptions = conn.execute("""
-        SELECT * FROM prescriptions 
-        WHERE patient_id = ? 
+        SELECT * FROM prescriptions
+        WHERE patient_id = ?
         ORDER BY stock_remaining ASC
     """, (patient["id"],)).fetchall()
 
@@ -1886,7 +1887,7 @@ def admin_test_sms():
     Returns status, recipient, mode, and sanitized gateway response.
     """
     session_role = session.get("user_role")
-    if session_role not in ["ADMIN", "PHARMACY"]:
+    if session_role not in {"ADMIN", "PHARMACY"}:
         return jsonify({"error": "Unauthorized: Admin privileges required."}), 403
 
     phone = request.form.get("phone") or (request.json.get("phone") if request.is_json else None)
@@ -1997,7 +1998,7 @@ def admin_reminders():
     and manual trigger/test tools.
     """
     session_role = session.get("user_role")
-    if session_role not in ["ADMIN", "PHARMACY"]:
+    if session_role not in {"ADMIN", "PHARMACY"}:
         flash("Unauthorized access. Admin privileges required.", "error")
         return redirect(url_for("signin"))
 
@@ -2029,7 +2030,7 @@ def admin_trigger_check():
     Returns JSON report of dispatched SMS and voice reminders.
     """
     session_role = session.get("user_role")
-    if session_role not in ["ADMIN", "PHARMACY"]:
+    if session_role not in {"ADMIN", "PHARMACY"}:
         return jsonify({"error": "Unauthorized"}), 403
 
     base_url = os.getenv("APP_BASE_URL", request.url_root.rstrip("/"))
@@ -2044,7 +2045,7 @@ def admin_test_call():
     Returns status, call SID, and provider details.
     """
     session_role = session.get("user_role")
-    if session_role not in ["ADMIN", "PHARMACY"]:
+    if session_role not in {"ADMIN", "PHARMACY"}:
         return jsonify({"error": "Unauthorized"}), 403
 
     phone = request.form.get("phone") or (request.json.get("phone") if request.is_json else None)
@@ -2864,6 +2865,105 @@ def api_viva_ask():
 
     answer = VivaAssistant.answer_question(question)
     return jsonify(answer)
+
+# ----------------- FREE REAL-TIME MEDICATION & STOCK ALERTS API ----------------- #
+@app.route("/api/notifications/active_alerts")
+def api_active_alerts():
+    """
+    Zero-cost, local real-time alerts endpoint:
+    Returns due medication schedules, low stock warnings, and Tamil/English content
+    without requiring any paid SMS, Twilio, or Fast2SMS subscriptions.
+    """
+    patient_id = session.get("patient_id")
+    if not patient_id or not _patient_access_allowed(patient_id):
+        abort(403)
+
+    conn = get_db_connection()
+    now_ist = get_current_ist_datetime()
+    today_str = now_ist.date().isoformat()
+    current_hhmm = now_ist.strftime("%H:%M")
+
+    # 1. Fetch patient
+    patient = conn.execute("SELECT * FROM patients WHERE id = ?", (patient_id,)).fetchone()
+    if not patient:
+        conn.close()
+        abort(404)
+    patient_name = patient["name"] if patient else "Senior Citizen"
+    preferred_lang = session.get("lang") or (patient["preferred_language"] if patient else "ta")
+
+    # 2. Fetch prescriptions
+    prescriptions = conn.execute("""
+        SELECT * FROM prescriptions
+        WHERE patient_id = ?
+        ORDER BY schedule_time ASC
+    """, (patient_id,)).fetchall()
+
+    # 3. Fetch today's taken dose logs
+    taken_logs = conn.execute("""
+        SELECT prescription_id FROM dose_logs
+        WHERE patient_id = ? AND scheduled_for = ? AND status = 'Taken'
+    """, (patient_id, today_str)).fetchall()
+    taken_ids = {row["prescription_id"] for row in taken_logs}
+
+    due_reminders = []
+    low_stock_alerts = []
+
+    for p in prescriptions:
+        rx_id = p["id"]
+        sched_time = (p["schedule_time"] or "08:00").strip()[:5]
+        stock = p["stock_remaining"] if p["stock_remaining"] is not None else 30
+        threshold = p["refill_threshold"] if p["refill_threshold"] is not None else 5
+        med_name = p["medicine_name"]
+        dosage = p["dosage"] or "Standard"
+        advice = p["timing_advice"] or "With Water"
+
+        # Low-stock check
+        if stock <= threshold:
+            low_stock_alerts.append({
+                "id": rx_id,
+                "medicine_name": med_name,
+                "stock_remaining": stock,
+                "threshold": threshold,
+                "msg_en": f"Low Stock Alert: {med_name} has only {stock} tablets left. Please refill soon.",
+                "msg_ta": f"குறைந்த இருப்பு எச்சரிக்கை: {med_name} மாத்திரைகள் {stock} மட்டுமே உள்ளன. உடனே ரீபில் செய்யவும்."
+            })
+
+        # Due reminder check: if not taken today and current time is at or near scheduled time
+        if rx_id not in taken_ids:
+            try:
+                sh, sm = map(int, sched_time.split(":"))
+                now_mins = now_ist.hour * 60 + now_ist.minute
+                sched_mins = sh * 60 + sm
+                diff = now_mins - sched_mins
+                # Due if within 0 to 120 minutes of schedule time (or if requested via force param)
+                force_test = request.args.get("force") == "1"
+                if force_test or (0 <= diff <= 120):
+                    due_reminders.append({
+                        "id": rx_id,
+                        "medicine_name": med_name,
+                        "dosage": dosage,
+                        "timing": p["timing"] or "Daily",
+                        "timing_advice": advice,
+                        "schedule_time": sched_time,
+                        "color_code": p["color_code"] or "#F28B82",
+                        "stock_remaining": stock,
+                        "diff_mins": diff,
+                        "msg_en": f"Hello {patient_name}! It is time to take your {med_name} ({dosage}, {advice}). Please drink with a full glass of water.",
+                        "msg_ta": f"வணக்கம் {patient_name}! உங்கள் {med_name} ({dosage}, {advice}) மாத்திரையை உட்கொள்ள வேண்டிய நேரம் வந்துவிட்டது. ஒரு டம்ளர் தண்ணீருடன் உட்கொள்ளவும்."
+                    })
+            except (TypeError, ValueError):
+                app.logger.warning("Skipping reminder for prescription %s with invalid schedule time.", rx_id)
+
+    conn.close()
+    return jsonify({
+        "success": True,
+        "is_authenticated": True,
+        "patient_name": patient_name,
+        "preferred_lang": preferred_lang,
+        "current_time": current_hhmm,
+        "reminders": due_reminders,
+        "low_stock": low_stock_alerts
+    })
 
 if __name__ == "__main__":
     if os.getenv("RUN_REMINDER_WORKER", "true").lower() in {"1", "true", "yes"}:

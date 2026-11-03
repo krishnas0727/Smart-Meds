@@ -43,3 +43,35 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(request).catch(() => caches.match('/static/offline.html')));
   }
 });
+
+// ==================== BROWSER NOTIFICATIONS EVENT LISTENERS ==================== //
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Smart Meds — Medicine Reminder';
+  const options = {
+    body: data.body || 'Time to take your scheduled dose.',
+    icon: '/static/icons/smart-meds-192.png',
+    badge: '/static/icons/smart-meds-192.png',
+    tag: data.tag || 'smart-meds-notification',
+    renotify: true,
+    data: data.url || '/'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

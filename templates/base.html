@@ -283,6 +283,13 @@
             <i class="fa-solid fa-volume-high text-[#F28B82]"></i>
             <span class="hidden sm:inline" data-i18n="header_voice_summary">Voice Summary</span>
           </button>
+
+          <!-- Free In-App & Browser Notification Toggle Bell -->
+          <button id="btn-browser-notifications" onclick="toggleNotificationPermission()" title="Enable Free Push Notifications / நினைவூட்டல் அறிவிப்புகள்" class="relative bg-[#FFF4F3] hover:bg-[#FDECEB] border border-[#FCDAD7] text-[#30343B] font-bold text-xs sm:text-sm px-3 py-2 rounded-2xl flex items-center gap-1.5 transition active:scale-95 shadow-sm cursor-pointer" aria-label="Toggle Free Medicine Reminders">
+            <i id="notif-bell-icon" class="fa-solid fa-bell text-[#F28B82]"></i>
+            <span id="notif-badge-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#65B9A9] ring-2 ring-white"></span>
+            <span class="hidden sm:inline" data-i18n="header_alerts">Alerts</span>
+          </button>
           {% endif %}
 
           <!-- Emergency SOS Speed Dial -->
@@ -408,6 +415,92 @@
         <p id="voice-toast-msg" class="text-sm text-[#30343B] mt-0.5 leading-relaxed font-medium"></p>
       </div>
       <button onclick="stopSpeech()" aria-label="Close voice readout" class="text-[#777D87] hover:text-[#30343B] font-bold text-lg">&times;</button>
+    </div>
+
+    <!-- ==================== FREE IN-APP MEDICINE REMINDER MODAL ==================== -->
+    <div id="in-app-reminder-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden" role="dialog" aria-modal="true" aria-labelledby="reminder-modal-med-name">
+      <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-[#F28B82] overflow-hidden transform transition-all">
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-[#F28B82] to-[#E07067] px-6 py-4 text-white flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl">
+              <i class="fa-solid fa-bell"></i>
+            </div>
+            <div>
+              <span class="text-xs uppercase tracking-wider font-extrabold text-white/90">Medicine Reminder / மருந்து நினைவூட்டல்</span>
+              <h3 class="text-lg font-black leading-tight text-white">Time for Your Medicine!</h3>
+            </div>
+          </div>
+          <button onclick="closeInAppReminderModal()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-lg font-bold transition cursor-pointer" aria-label="Close Reminder">
+            &times;
+          </button>
+        </div>
+
+        <!-- Medicine Information Details -->
+        <div class="p-6 space-y-4">
+          <div class="flex items-start gap-4 p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7]">
+            <div class="w-12 h-12 rounded-2xl bg-[#FDECEB] text-[#E07067] flex items-center justify-center text-2xl flex-shrink-0 shadow-sm">
+              <i class="fa-solid fa-pills"></i>
+            </div>
+            <div class="flex-grow">
+              <h4 id="reminder-modal-med-name" class="text-xl font-black text-[#30343B]">--</h4>
+              <div class="flex flex-wrap items-center gap-2 mt-1">
+                <span id="reminder-modal-dosage" class="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-[#EBF6F4] text-[#448074] border border-[#C5E6E0]">--</span>
+                <span id="reminder-modal-time" class="inline-block px-2.5 py-0.5 rounded-lg text-xs font-black bg-[#FDECEB] text-[#E07067]">--</span>
+                <span id="reminder-modal-timing" class="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-[#777D87]">--</span>
+              </div>
+              <p id="reminder-modal-advice" class="text-xs text-[#777D87] font-semibold mt-2 italic flex items-center gap-1">
+                <i class="fa-solid fa-circle-info text-[#F28B82]"></i>
+                <span>Take as prescribed by doctor</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Bilingual Audio Control -->
+          <div class="flex items-center justify-between px-2 py-1 text-xs text-[#777D87]">
+            <span class="flex items-center gap-1.5 font-semibold text-[#448074]">
+              <i class="fa-solid fa-volume-high text-[#65B9A9]"></i> Tamil Voice Reading Active
+            </span>
+            <button onclick="repeatReminderVoice()" class="text-[#E07067] hover:underline font-bold flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-rotate-right"></i> Repeat Voice (குரல் வாசிப்பு)
+            </button>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <button id="btn-modal-take-dose" onclick="takeDoseFromReminder()" class="w-full bg-[#65B9A9] hover:bg-[#529E90] text-white font-extrabold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition active:scale-95 cursor-pointer">
+              <i class="fa-solid fa-check-circle text-lg"></i>
+              <span>Take Dose Now</span>
+            </button>
+            <button onclick="snoozeActiveReminder()" class="w-full bg-[#FFF4F3] hover:bg-[#FDECEB] text-[#30343B] border border-[#FCDAD7] font-bold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer">
+              <i class="fa-solid fa-clock text-[#F28B82]"></i>
+              <span>Snooze (10m)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== FREE LOW STOCK ALERT TOAST ==================== -->
+    <div id="low-stock-alert-card" class="fixed bottom-6 left-6 max-w-sm bg-white text-[#30343B] p-4 rounded-3xl shadow-2xl border-2 border-amber-400 hidden z-50 flex items-start gap-3.5 transition">
+      <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 text-xl shadow-sm">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div class="flex-grow">
+        <div class="flex items-center justify-between">
+          <h4 class="font-bold text-xs uppercase tracking-wider text-amber-600">Low Stock Warning / குறைந்த இருப்பு</h4>
+          <button onclick="closeLowStockToast()" class="text-[#777D87] hover:text-[#30343B] font-bold text-base cursor-pointer">&times;</button>
+        </div>
+        <p id="low-stock-alert-msg" class="text-xs text-[#30343B] mt-1 font-semibold leading-relaxed"></p>
+        <div class="mt-2.5 flex items-center gap-2">
+          <a href="{{ url_for('refill') }}" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-[#F28B82] hover:bg-[#E07067] text-white transition shadow-sm">
+            <i class="fa-solid fa-cart-shopping"></i> Refill Now
+          </a>
+          <button onclick="closeLowStockToast()" class="text-[11px] text-[#777D87] hover:underline font-bold">
+            Later
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- FOOTER -->
