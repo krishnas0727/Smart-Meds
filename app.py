@@ -106,9 +106,9 @@ def require_login():
         "pharmacy_assisted_order": {"PHARMACY", "ADMIN"},
         "pharmacy_verify_rx": {"PHARMACY", "ADMIN"},
         "pharmacy_cancel_order": {"PHARMACY", "ADMIN"},
-        "patient_details": {"PATIENT"},
+        "patient_details": {"PATIENT", "ADMIN"},
         "logout": {"PATIENT", "CAREGIVER", "PHARMACY", "DELIVERY", "ADMIN"},
-        "update_patient_details": {"PATIENT"},
+        "update_patient_details": {"PATIENT", "ADMIN"},
         "index": {"PATIENT", "CAREGIVER", "ADMIN"},
         "medicines_directory": {"PATIENT", "CAREGIVER", "ADMIN"},
         "add_prescription": {"PATIENT", "CAREGIVER", "ADMIN"},
@@ -123,11 +123,11 @@ def require_login():
         "api_order_rider_location": {"PATIENT", "CAREGIVER", "ADMIN", "PHARMACY", "DELIVERY"},
         "api_send_order_whatsapp": {"PATIENT", "CAREGIVER", "ADMIN", "PHARMACY"},
         "caregiver": {"CAREGIVER", "PATIENT", "ADMIN"},
-        "voice_summary": {"PATIENT", "CAREGIVER"},
+        "voice_summary": {"PATIENT", "CAREGIVER", "ADMIN"},
         "print_schedule_card": {"PATIENT", "CAREGIVER", "ADMIN"},
-        "create_caregiver_invite": {"PATIENT"},
-        "revoke_caregiver_access": {"PATIENT"},
-        "update_notification_preferences": {"PATIENT", "CAREGIVER"},
+        "create_caregiver_invite": {"PATIENT", "ADMIN"},
+        "revoke_caregiver_access": {"PATIENT", "ADMIN"},
+        "update_notification_preferences": {"PATIENT", "CAREGIVER", "ADMIN"},
         "take_dose": {"PATIENT", "CAREGIVER", "ADMIN"},
         "sos": {"PATIENT", "CAREGIVER", "ADMIN"},
         "sos_alert": {"PATIENT", "CAREGIVER", "ADMIN"},
@@ -135,7 +135,7 @@ def require_login():
         "log_vital": {"PATIENT", "CAREGIVER", "ADMIN"},
         "delete_vital": {"PATIENT", "CAREGIVER", "ADMIN"},
         "api_vitals_chart_data": {"PATIENT", "CAREGIVER", "ADMIN"},
-        "api_active_alerts": {"PATIENT", "CAREGIVER"},
+        "api_active_alerts": {"PATIENT", "CAREGIVER", "ADMIN"},
         "admin_reminders": {"ADMIN", "PHARMACY"},
         "admin_trigger_check": {"ADMIN", "PHARMACY"},
         "admin_test_call": {"ADMIN", "PHARMACY"},
@@ -315,8 +315,12 @@ def signin():
                 session["user_role"] = user["role"]
                 session["user_name"] = user["full_name"]
                 session["user_phone"] = user["phone"]
-                if user["role"] in {"PATIENT", "CAREGIVER"} and user["patient_id"]:
+                if user["patient_id"]:
                     session["patient_id"] = user["patient_id"]
+                elif user["role"] == "ADMIN":
+                    first_p = conn.execute("SELECT id FROM patients ORDER BY id ASC LIMIT 1").fetchone()
+                    if first_p:
+                        session["patient_id"] = first_p["id"]
                 conn.execute("DELETE FROM login_attempts WHERE ip_hash = ?", (fingerprint,))
                 conn.close()
 
