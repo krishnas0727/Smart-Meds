@@ -2,19 +2,15 @@ services:
   - type: web
     name: smart-meds
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python run_web.py
+    startCommand: gunicorn app:app
     healthCheckPath: /healthz
-    disk:
-      name: smart-meds-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_PATH
-        value: /var/data/medcare.db
+        value: ./instance/smart_meds.db
       - key: PORT
         value: 10000
       - key: FLASK_DEBUG
