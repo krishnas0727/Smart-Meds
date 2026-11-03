@@ -979,16 +979,19 @@ class CommunicationService:
                 "notes": "Live voice request dispatched. Phone will ring shortly."
             }
         else:
+            voice_script = test_message or "Hello! This is a test call from ElderCare Smart Meds. Your scheduled medication reminder service is active and running successfully."
             return {
-                "success": False,
+                "success": True,
                 "provider": "MOCK_SIMULATOR",
                 "mode": mode,
                 "call_sid": f"CA-TEST-SIM-{int(time.time())}",
                 "recipient": normalized,
-                "status": "NOT_CONFIGURED (Sandbox Mode)",
+                "status": "SIMULATED_SUCCESS (Free Sandbox Mode)",
+                "voice_script": voice_script,
                 "notes": (
-                    "No active Twilio voice credentials configured in .env. "
-                    "Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to enable live cellular voice calls."
+                    "Voice call simulated successfully in Free Sandbox Mode. "
+                    "Browser audio preview can play this call script aloud. "
+                    "To place live physical cellular calls to a handset, configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in .env."
                 )
             }
 
@@ -1022,15 +1025,21 @@ class CommunicationService:
                 "notes": "Fast2SMS message dispatched." if success else f"Fast2SMS error: {status}"
             }
         else:
+            import urllib.parse
+            wa_digits = "".join(ch for ch in normalized if ch.isdigit())
+            wa_url = f"https://api.whatsapp.com/send?phone={wa_digits}&text={urllib.parse.quote(msg)}"
             return {
-                "success": False,
+                "success": True,
                 "provider": "MOCK_SIMULATOR",
                 "mode": mode,
                 "recipient": normalized,
-                "status": "NOT_CONFIGURED (Sandbox Mode)",
+                "status": "SIMULATED_SUCCESS (Free Sandbox Mode)",
+                "wa_url": wa_url,
+                "message_body": msg,
                 "notes": (
-                    "No active SMS provider credentials detected in .env. "
-                    "Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to enable real cellular SMS."
+                    "SMS simulated successfully in Free Sandbox Mode. "
+                    "Use the WhatsApp link to deliver this message directly to the recipient without paid API keys. "
+                    "To send real cellular telecom SMS, configure TWILIO or FAST2SMS keys in .env."
                 )
             }
 

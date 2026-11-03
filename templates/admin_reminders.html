@@ -327,11 +327,24 @@
       </form>
 
       <!-- Diagnostic Output Box -->
-      <div id="diagnostic-output-card" class="hidden p-3.5 rounded-2xl bg-slate-900 text-slate-100 text-xs font-mono space-y-1.5 shadow-inner">
+      <div id="diagnostic-output-card" class="hidden p-3.5 rounded-2xl bg-slate-900 text-slate-100 text-xs font-mono space-y-2 shadow-inner">
         <div class="flex items-center justify-between border-b border-slate-700 pb-1.5 text-[11px]">
           <span class="text-emerald-400 font-bold flex items-center gap-1"><i class="fa-solid fa-terminal"></i> Gateway Response</span>
           <span id="diagnostic-time" class="text-slate-400 text-[10px]"></span>
         </div>
+
+        <!-- 1-Click Interactive Free Actions for Sandbox Mode -->
+        <div id="diagnostic-actions" class="hidden flex flex-wrap gap-2 pt-1 pb-1">
+          <a id="btn-diag-whatsapp" href="#" target="_blank" class="hidden px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold text-xs flex items-center gap-1.5 transition shadow-sm">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+            <span>Send via Free WhatsApp</span>
+          </a>
+          <button id="btn-diag-voice" type="button" onclick="playDiagnosticVoice()" class="hidden px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-sans font-bold text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer">
+            <i class="fa-solid fa-volume-high text-sm"></i>
+            <span>Play Call Voice Audio</span>
+          </button>
+        </div>
+
         <pre id="diagnostic-json" class="whitespace-pre-wrap break-all text-[11px] leading-relaxed text-emerald-300"></pre>
       </div>
 
@@ -545,14 +558,49 @@ async function executeTestSMS(e) {
   }
 }
 
+let _currentVoiceScript = "";
+
 function showDiagnosticOutput(data) {
   const card = document.getElementById("diagnostic-output-card");
   const jsonPre = document.getElementById("diagnostic-json");
   const timeSpan = document.getElementById("diagnostic-time");
+  const actionsDiv = document.getElementById("diagnostic-actions");
+  const waBtn = document.getElementById("btn-diag-whatsapp");
+  const voiceBtn = document.getElementById("btn-diag-voice");
+
   card.classList.remove("hidden");
   timeSpan.textContent = new Date().toLocaleTimeString();
   jsonPre.textContent = JSON.stringify(data, null, 2);
+
+  if (actionsDiv) actionsDiv.classList.add("hidden");
+  if (waBtn) waBtn.classList.add("hidden");
+  if (voiceBtn) voiceBtn.classList.add("hidden");
+
+  if (data.wa_url && waBtn) {
+    waBtn.href = data.wa_url;
+    waBtn.classList.remove("hidden");
+    if (actionsDiv) actionsDiv.classList.remove("hidden");
+  }
+
+  if (data.voice_script && voiceBtn) {
+    _currentVoiceScript = data.voice_script;
+    voiceBtn.classList.remove("hidden");
+    if (actionsDiv) actionsDiv.classList.remove("hidden");
+    // Play voice audio directly in browser
+    playDiagnosticVoice();
+  }
+
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function playDiagnosticVoice() {
+  if (_currentVoiceScript && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const isTa = (document.documentElement.lang === 'ta' || (localStorage.getItem('lang') === 'ta'));
+    const utter = new SpeechSynthesisUtterance(_currentVoiceScript);
+    utter.rate = 0.9;
+    window.speechSynthesis.speak(utter);
+  }
 }
 </script>
 {% endblock %}
