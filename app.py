@@ -142,6 +142,7 @@ def require_login():
         "admin_test_sms": {"ADMIN", "PHARMACY"},
         "advance_order_status": {"PHARMACY", "DELIVERY", "ADMIN"},
         "cancel_patient_order": {"PATIENT", "CAREGIVER", "PHARMACY", "ADMIN"},
+        "switch_mode": {"PATIENT", "CAREGIVER", "ADMIN", "PHARMACY", "DELIVERY"},
     }
     allowed_roles = role_requirements.get(request.endpoint)
     if not allowed_roles or user_role not in allowed_roles:
@@ -2965,6 +2966,85 @@ def api_active_alerts():
         "reminders": due_reminders,
         "low_stock": low_stock_alerts
     })
+
+# ----------------- PROTOTYPE ROLE SWITCHER & CUSTOM 403 HANDLER ----------------- #
+@app.route("/switch_mode/<target_role>")
+def switch_mode(target_role):
+    """Allows demo tester to toggle between Patient, Pharmacy, and Admin modes seamlessly."""
+    if not session.get("user_role"):
+        return redirect(url_for("signin"))
+    role = target_role.upper()
+    if role in {"PATIENT", "ADMIN", "PHARMACY", "CAREGIVER"}:
+        session["user_role"] = role
+        if not session.get("patient_id"):
+            conn = get_db_connection()
+            p = conn.execute("SELECT id FROM patients ORDER BY id ASC LIMIT 1").fetchone()
+            if p:
+                session["patient_id"] = p["id"]
+            conn.close()
+        flash(f"Role switched to {role} mode successfully.", "success")
+        if role == "PHARMACY":
+            return redirect(url_for("pharmacy"))
+        elif role == "ADMIN":
+            return redirect(url_for("admin_reminders"))
+        return redirect(url_for("index"))
+    return redirect(url_for("index"))
+
+@app.errorhandler(403)
+def forbidden_error(e):
+    user_role = session.get("user_role", "PATIENT")
+    user_name = session.get("user_name", "User")
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 Forbidden - Staff Access Required</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-[#FFF4F3] min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-[#FCDAD7] text-center space-y-5">
+    <div class="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-3xl shadow-sm">
+      <i class="fa-solid fa-lock"></i>
+    </div>
+    <div>
+      <span class="inline-block px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-wider mb-2">Staff Access Control (403)</span>
+      <h1 class="text-2xl font-black text-[#30343B]">Permission Required</h1>
+      <p class="text-sm text-[#777D87] mt-1">
+        You are signed in as <strong class="text-[#30343B]">{user_name}</strong> with role <span class="px-2 py-0.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-700">{user_role}</span>.
+      </p>
+      <p class="text-xs text-[#777D87] mt-2">
+        The Pharmacy Portal and Reminders & Calls require Staff/Admin privileges.
+      </p>
+    </div>
+
+    <div class="p-4 rounded-2xl bg-[#FFF4F3] border border-[#FCDAD7] space-y-2.5 text-left">
+      <div class="text-xs font-black text-[#30343B] flex items-center gap-1.5">
+        <i class="fa-solid fa-wand-magic-sparkles text-[#F28B82]"></i> Click to Switch Role & Open:
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <a href="/switch_mode/PHARMACY" class="py-2.5 px-3 rounded-xl bg-[#65B9A9] hover:bg-[#529E90] text-white text-xs font-black flex items-center justify-center gap-1.5 transition shadow-sm">
+          <i class="fa-solid fa-store"></i> Open as Pharmacy
+        </a>
+        <a href="/switch_mode/ADMIN" class="py-2.5 px-3 rounded-xl bg-[#F28B82] hover:bg-[#E07067] text-white text-xs font-black flex items-center justify-center gap-1.5 transition shadow-sm">
+          <i class="fa-solid fa-shield-halved"></i> Open as Admin
+        </a>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center gap-3 pt-2 text-xs">
+      <a href="/" class="text-[#777D87] hover:text-[#30343B] font-bold">&larr; Return to Patient Dashboard</a>
+      <span class="text-[#EAECEF]">|</span>
+      <form method="post" action="/logout" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{session.get('csrf_token', '')}">
+        <button type="submit" class="text-rose-600 hover:underline font-bold bg-transparent border-0 cursor-pointer p-0 text-xs">Sign Out</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>"""
+    return html, 403
 
 if __name__ == "__main__":
     if os.getenv("RUN_REMINDER_WORKER", "true").lower() in {"1", "true", "yes"}:

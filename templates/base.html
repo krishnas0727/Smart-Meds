@@ -193,6 +193,15 @@
           </div>
         </div>
       </div>
+      <!-- Prototype Role Switcher Pills -->
+      <div class="mb-3 p-1.5 rounded-xl bg-white border border-[#FCDAD7] flex items-center justify-between text-[11px]">
+        <span class="text-[#777D87] font-bold text-[10px] uppercase tracking-wider pl-1">Switch:</span>
+        <div class="flex items-center gap-1">
+          <a href="{{ url_for('switch_mode', target_role='ADMIN') }}" title="Switch to Admin" class="px-2 py-0.5 rounded-lg {% if user_role == 'ADMIN' %}bg-[#F28B82] text-white font-black shadow-sm{% else %}bg-slate-50 border border-[#EAECEF] text-[#777D87] font-bold hover:bg-slate-100{% endif %} transition">Admin</a>
+          <a href="{{ url_for('switch_mode', target_role='PHARMACY') }}" title="Switch to Pharmacy" class="px-2 py-0.5 rounded-lg {% if user_role == 'PHARMACY' %}bg-[#65B9A9] text-white font-black shadow-sm{% else %}bg-slate-50 border border-[#EAECEF] text-[#777D87] font-bold hover:bg-slate-100{% endif %} transition">Pharmacy</a>
+          <a href="{{ url_for('switch_mode', target_role='PATIENT') }}" title="Switch to Patient" class="px-2 py-0.5 rounded-lg {% if user_role == 'PATIENT' %}bg-rose-500 text-white font-black shadow-sm{% else %}bg-slate-50 border border-[#EAECEF] text-[#777D87] font-bold hover:bg-slate-100{% endif %} transition">Patient</a>
+        </div>
+      </div>
       <div class="flex gap-2">
         <a href="{{ url_for('patient_details') }}" title="Patient Details" class="flex-1 text-center py-2 px-3 rounded-xl bg-white border border-[#EAECEF] hover:bg-[#FFF4F3] text-xs font-bold text-[#777D87] hover:text-[#30343B] transition">
           <i class="fa-solid fa-id-card mr-1"></i> Profile
