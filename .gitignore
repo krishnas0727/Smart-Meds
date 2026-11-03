@@ -10,7 +10,8 @@
 *-wal
 *-shm
 backups/
-instance/
+instance/*
+!instance/.gitkeep
 
 # Python
 .venv/

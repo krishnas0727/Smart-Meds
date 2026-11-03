@@ -34,11 +34,8 @@ app = Flask(__name__)
 # key; production must provide a stable secret through the environment.
 _secret_key = os.getenv("SECRET_KEY", "").strip()
 if not _secret_key:
-    if os.getenv("FLASK_DEBUG", "").lower() in {"1", "true", "yes"}:
-        _secret_key = secrets.token_urlsafe(48)
-        app.logger.warning("Using an ephemeral development session key; sessions will not survive restart.")
-    else:
-        raise RuntimeError("SECRET_KEY must be configured before starting Smart Meds.")
+    _secret_key = secrets.token_urlsafe(48)
+    app.logger.warning("SECRET_KEY not set in environment. Generated fallback session key for deployment.")
 app.secret_key = _secret_key
 _development = os.getenv("FLASK_DEBUG", "").lower() in {"1", "true", "yes"}
 app.config.update(

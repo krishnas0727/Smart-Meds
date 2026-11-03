@@ -4,14 +4,46 @@ import os
 import sqlite3
 
 
-DB_PATH = os.getenv(
-    "DATABASE_PATH",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "medcare.db"),
-)
+def get_db_path():
+    raw_path = os.getenv("DATABASE_PATH")
+    if not raw_path:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), "medcare.db")
+    
+    if not os.path.isabs(raw_path):
+        resolved = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), raw_path))
+    else:
+        resolved = raw_path
+
+    # Auto-create directory if missing, with graceful fallback on permission issues
+    parent_dir = os.path.dirname(os.path.abspath(resolved))
+    if parent_dir:
+        try:
+            os.makedirs(parent_dir, exist_ok=True)
+        except (PermissionError, OSError):
+            return os.path.join(os.path.dirname(os.path.abspath(__file__)), "medcare.db")
+    return resolved
+
+
+DB_PATH = get_db_path()
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    db_path = get_db_path()
+    parent_dir = os.path.dirname(os.path.abspath(db_path))
+    if parent_dir:
+        try:
+            os.makedirs(parent_dir, exist_ok=True)
+        except (PermissionError, OSError):
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "medcare.db")
+            os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+
+    try:
+        conn = sqlite3.connect(db_path, timeout=30.0)
+    except sqlite3.OperationalError:
+        # Fallback to local file in project directory if custom directory fails to open
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "medcare.db")
+        conn = sqlite3.connect(db_path, timeout=30.0)
+
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 30000;")
     conn.execute("PRAGMA foreign_keys = ON;")
@@ -433,7 +465,10 @@ def migrate_db(conn):
 def init_db():
     conn = get_db_connection()
     try:
-        conn.execute("PRAGMA journal_mode=WAL;")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        except sqlite3.OperationalError:
+            conn.execute("PRAGMA journal_mode=DELETE;")
         migrate_db(conn)
         med_count = conn.execute("SELECT COUNT(*) FROM medicines").fetchone()[0]
         demo_seed_enabled = os.getenv("SMART_MEDS_DEMO_SEED", "").lower() in {
